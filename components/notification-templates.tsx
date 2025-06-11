@@ -1,515 +1,1021 @@
 "use client"
 
+import React from "react"
+
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Save, Plus, Edit, Trash2, Copy, Type, Bell, Mail, Smartphone, MessageSquare } from "lucide-react"
+import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Bell,
+  Mail,
+  Smartphone,
+  MessageSquare,
+  Save,
+  Eye,
+  Edit,
+  Trash2,
+  Plus,
+  Copy,
+  Download,
+  Settings,
+  Target,
+  Users,
+  Printer,
+  MessageCircle,
+  TrendingUp,
+} from "lucide-react"
+import Image from "next/image"
+import { Switch } from "@/components/ui/switch"
 
 interface NotificationTemplate {
   id: string
   name: string
-  type: "sales" | "orders" | "messages" | "followers" | "system" | "marketing"
-  channel: "email" | "push" | "sms" | "inApp"
+  type: "email" | "push" | "sms" | "in-app"
+  category: "sales" | "orders" | "messages" | "system" | "marketing" | "social"
+  subject?: string
   title: string
   body: string
-  icon: string
+  icon?: string
   color: string
   variables: string[]
-  isDefault: boolean
   isActive: boolean
-  createdAt: Date
-  updatedAt: Date
+  isDefault: boolean
+  createdAt: string
+  lastModified: string
 }
 
-export function NotificationTemplates() {
+interface PreviewData {
+  modelName: string
+  amount: string
+  buyerName: string
+  customerName: string
+  senderName: string
+  followerName: string
+  totalFollowers: string
+  discountPercent: string
+  expiryDate: string
+  promoCode: string
+}
+
+interface NewTemplate extends Partial<NotificationTemplate> {
+  name: string
+  type: "email" | "push" | "sms" | "in-app"
+  category: "sales" | "orders" | "messages" | "system" | "marketing" | "social"
+  title: string
+  body: string
+  color: string
+  variables: string[]
+  isActive: boolean
+  isDefault: boolean
+}
+
+interface CategoryIcons {
+  [key: string]: any
+}
+
+interface TypeIcons {
+  [key: string]: any
+}
+
+interface NotificationTemplatesProps {
+  handleSaveSettings: (section: string) => void
+}
+
+export function NotificationTemplates({ handleSaveSettings }: NotificationTemplatesProps) {
   const [templates, setTemplates] = useState<NotificationTemplate[]>([
     {
       id: "1",
-      name: "Venta Completada",
-      type: "sales",
-      channel: "push",
+      name: "Nueva Venta",
+      type: "push",
+      category: "sales",
       title: "¡Nueva venta! 🎉",
       body: "Has vendido {modelName} por ${amount}. ¡Felicidades!",
       icon: "💰",
       color: "#10B981",
       variables: ["modelName", "amount", "buyerName", "date"],
-      isDefault: true,
       isActive: true,
-      createdAt: new Date("2024-01-15"),
-      updatedAt: new Date("2024-01-15"),
+      isDefault: true,
+      createdAt: "2024-01-15",
+      lastModified: "2024-03-10",
     },
     {
       id: "2",
-      name: "Nuevo Pedido",
-      type: "orders",
-      channel: "email",
-      title: "Nuevo pedido de impresión",
-      body: "{customerName} ha solicitado imprimir {modelName}. Material: {material}, Cantidad: {quantity}",
+      name: "Pedido de Impresión",
+      type: "email",
+      category: "orders",
+      subject: "Nuevo pedido de impresión - {modelName}",
+      title: "Nuevo trabajo de impresión",
+      body: "Tienes un nuevo pedido de impresión para {modelName}. Cliente: {customerName}. Fecha límite: {deadline}.",
       icon: "🖨️",
       color: "#3B82F6",
-      variables: ["customerName", "modelName", "material", "quantity", "deadline"],
-      isDefault: true,
+      variables: ["modelName", "customerName", "deadline", "material", "quantity"],
       isActive: true,
-      createdAt: new Date("2024-01-15"),
-      updatedAt: new Date("2024-01-15"),
+      isDefault: true,
+      createdAt: "2024-01-15",
+      lastModified: "2024-03-10",
     },
     {
       id: "3",
-      name: "Mensaje Recibido",
-      type: "messages",
-      channel: "push",
+      name: "Mensaje Privado",
+      type: "in-app",
+      category: "messages",
       title: "Nuevo mensaje",
-      body: "{senderName}: {preview}",
+      body: '{senderName} te ha enviado un mensaje: "{preview}"',
       icon: "💬",
       color: "#8B5CF6",
       variables: ["senderName", "preview", "timestamp"],
-      isDefault: true,
       isActive: true,
-      createdAt: new Date("2024-01-15"),
-      updatedAt: new Date("2024-01-15"),
+      isDefault: true,
+      createdAt: "2024-01-15",
+      lastModified: "2024-03-10",
+    },
+    {
+      id: "4",
+      name: "Nuevo Seguidor",
+      type: "push",
+      category: "social",
+      title: "¡Nuevo seguidor!",
+      body: "{followerName} ahora te sigue. ¡Ya tienes {totalFollowers} seguidores!",
+      icon: "👥",
+      color: "#F59E0B",
+      variables: ["followerName", "totalFollowers"],
+      isActive: true,
+      isDefault: false,
+      createdAt: "2024-02-01",
+      lastModified: "2024-03-05",
+    },
+    {
+      id: "5",
+      name: "Modelo Aprobado",
+      type: "email",
+      category: "system",
+      subject: "Tu modelo {modelName} ha sido aprobado",
+      title: "¡Modelo aprobado! ✅",
+      body: "Tu modelo {modelName} ha sido revisado y aprobado. Ya está disponible en el marketplace.",
+      icon: "✅",
+      color: "#059669",
+      variables: ["modelName", "approvalDate", "reviewerNotes"],
+      isActive: true,
+      isDefault: true,
+      createdAt: "2024-01-20",
+      lastModified: "2024-02-28",
+    },
+    {
+      id: "6",
+      name: "Oferta Especial",
+      type: "email",
+      category: "marketing",
+      subject: "🎁 Oferta especial: {discountPercent}% de descuento",
+      title: "¡Oferta limitada!",
+      body: "Aprovecha nuestro descuento del {discountPercent}% en todos los modelos. Válido hasta {expiryDate}. Código: {promoCode}",
+      icon: "🎁",
+      color: "#DC2626",
+      variables: ["discountPercent", "expiryDate", "promoCode"],
+      isActive: false,
+      isDefault: false,
+      createdAt: "2024-03-01",
+      lastModified: "2024-03-15",
     },
   ])
 
   const [selectedTemplate, setSelectedTemplate] = useState<NotificationTemplate | null>(null)
   const [isEditing, setIsEditing] = useState(false)
-  const [previewData, setPreviewData] = useState<Record<string, string>>({})
+  const [previewData, setPreviewData] = useState<PreviewData>({
+    modelName: "Dragón Épico",
+    amount: "25.99",
+    buyerName: "Juan Pérez",
+    customerName: "María García",
+    senderName: "Carlos López",
+    followerName: "Ana Martín",
+    totalFollowers: "127",
+    discountPercent: "20",
+    expiryDate: "31 de Marzo",
+    promoCode: "SPRING20",
+  })
 
-  const createNewTemplate = () => {
-    const newTemplate: NotificationTemplate = {
-      id: Date.now().toString(),
-      name: "Nueva Plantilla",
-      type: "system",
-      channel: "push",
-      title: "Título de la notificación",
-      body: "Cuerpo del mensaje",
-      icon: "🔔",
-      color: "#6366F1",
-      variables: [],
-      isDefault: false,
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
-    setTemplates([...templates, newTemplate])
-    setSelectedTemplate(newTemplate)
+  const [newTemplate, setNewTemplate] = useState<NewTemplate>({
+    name: "",
+    type: "push",
+    category: "sales",
+    title: "",
+    body: "",
+    color: "#3B82F6",
+    variables: [],
+    isActive: true,
+    isDefault: false,
+  })
+
+  const categoryIcons: CategoryIcons = {
+    sales: TrendingUp,
+    orders: Printer,
+    messages: MessageCircle,
+    system: Settings,
+    marketing: Target,
+    social: Users,
+  }
+
+  const typeIcons: TypeIcons = {
+    email: Mail,
+    push: Smartphone,
+    sms: MessageSquare,
+    "in-app": Bell,
+  }
+
+  const handleEditTemplate = (template: NotificationTemplate) => {
+    setSelectedTemplate(template)
     setIsEditing(true)
   }
 
-  const updateTemplate = (updatedTemplate: NotificationTemplate) => {
-    setTemplates(
-      templates.map((t) => (t.id === updatedTemplate.id ? { ...updatedTemplate, updatedAt: new Date() } : t)),
-    )
-    setSelectedTemplate(updatedTemplate)
-  }
-
-  const deleteTemplate = (id: string) => {
-    setTemplates(templates.filter((t) => t.id !== id))
-    if (selectedTemplate?.id === id) {
+  const handleSaveTemplate = () => {
+    if (selectedTemplate) {
+      setTemplates(
+        templates.map((t) =>
+          t.id === selectedTemplate.id
+            ? { ...selectedTemplate, lastModified: new Date().toISOString().split("T")[0] }
+            : t,
+        ),
+      )
+      setIsEditing(false)
       setSelectedTemplate(null)
     }
   }
 
-  const duplicateTemplate = (template: NotificationTemplate) => {
-    const duplicated: NotificationTemplate = {
-      ...template,
+  const handleCreateTemplate = () => {
+    const template: NotificationTemplate = {
+      ...(newTemplate as NotificationTemplate),
       id: Date.now().toString(),
-      name: `${template.name} (Copia)`,
-      isDefault: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: new Date().toISOString().split("T")[0],
+      lastModified: new Date().toISOString().split("T")[0],
     }
-    setTemplates([...templates, duplicated])
+    setTemplates([...templates, template])
+    setNewTemplate({
+      name: "",
+      type: "push",
+      category: "sales",
+      title: "",
+      body: "",
+      color: "#3B82F6",
+      variables: [],
+      isActive: true,
+      isDefault: false,
+    })
   }
 
-  const extractVariables = (text: string): string[] => {
-    const matches = text.match(/\{([^}]+)\}/g)
-    return matches ? matches.map((match) => match.slice(1, -1)) : []
+  const handleDeleteTemplate = (id: string) => {
+    setTemplates(templates.filter((t) => t.id !== id))
+  }
+
+  const handleToggleActive = (id: string) => {
+    setTemplates(templates.map((t) => (t.id === id ? { ...t, isActive: !t.isActive } : t)))
   }
 
   const renderPreview = (template: NotificationTemplate) => {
-    let title = template.title
-    let body = template.body
-
-    // Reemplazar variables con datos de preview
+    let content = template.body
     template.variables.forEach((variable) => {
-      const value = previewData[variable] || `{${variable}}`
-      title = title.replace(new RegExp(`\\{${variable}\\}`, "g"), value)
-      body = body.replace(new RegExp(`\\{${variable}\\}`, "g"), value)
+      const value = previewData[variable as keyof typeof previewData] || `{${variable}}`
+      content = content.replace(`{${variable}}`, value)
     })
 
-    return { title, body }
-  }
+    let title = template.title
+    template.variables.forEach((variable) => {
+      const value = previewData[variable as keyof typeof previewData] || `{${variable}}`
+      title = title.replace(`{${variable}}`, value)
+    })
 
-  const getChannelIcon = (channel: string) => {
-    switch (channel) {
-      case "email":
-        return <Mail className="h-4 w-4" />
-      case "push":
-        return <Smartphone className="h-4 w-4" />
-      case "sms":
-        return <MessageSquare className="h-4 w-4" />
-      case "inApp":
-        return <Bell className="h-4 w-4" />
-      default:
-        return <Bell className="h-4 w-4" />
-    }
-  }
-
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case "sales":
-        return "bg-green-500"
-      case "orders":
-        return "bg-blue-500"
-      case "messages":
-        return "bg-purple-500"
-      case "followers":
-        return "bg-yellow-500"
-      case "system":
-        return "bg-red-500"
-      case "marketing":
-        return "bg-pink-500"
-      default:
-        return "bg-gray-500"
+    if (template.type === "push" || template.type === "in-app") {
+      return (
+        <div className="space-y-4">
+          <div className="bg-gray-900 rounded-lg p-4 max-w-sm mx-auto">
+            <div className="flex items-start gap-3">
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center text-lg"
+                style={{ backgroundColor: template.color }}
+              >
+                {template.icon || "📱"}
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <div className="font-medium text-white">{title}</div>
+                  <div className="text-xs text-gray-400">ahora</div>
+                </div>
+                <div className="text-sm text-gray-300 mt-1">{content}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    } else if (template.type === "email") {
+      return (
+        <div className="space-y-4">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-auto">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-lg"
+                  style={{ backgroundColor: template.color, color: "white" }}
+                >
+                  {template.icon || "📧"}
+                </div>
+                <div className="font-medium text-gray-900">World 3D</div>
+              </div>
+              <div className="text-lg font-bold text-gray-900">{template.subject || title}</div>
+              <div className="text-gray-700">{content}</div>
+              <div className="pt-4 border-t border-gray-200 text-xs text-gray-500">
+                © 2024 World 3D. Todos los derechos reservados.
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    } else {
+      return (
+        <div className="space-y-4">
+          <div className="bg-gray-900 rounded-lg p-4 max-w-sm mx-auto">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center text-lg"
+                style={{ backgroundColor: template.color }}
+              >
+                {template.icon || "📱"}
+              </div>
+              <div className="flex-1">
+                <div className="text-white">{content}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
     }
   }
 
   return (
     <div className="space-y-6">
-      <Card className="bg-white/5 backdrop-blur-sm border-white/10">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Type className="h-5 w-5" />
-                Plantillas de Notificaciones
-              </CardTitle>
-              <CardDescription className="text-gray-300">
-                Personaliza el contenido y diseño de tus notificaciones
-              </CardDescription>
-            </div>
-            <Button onClick={createNewTemplate} className="bg-gradient-to-r from-cyan-500 to-blue-500">
-              <Plus className="h-4 w-4 mr-2" />
-              Nueva Plantilla
-            </Button>
+      <div className="relative w-full h-48 rounded-xl overflow-hidden mb-8">
+        <Image
+          src="/images/notification-templates.png"
+          alt="Plantillas de notificaciones"
+          fill
+          className="object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex items-center p-8">
+          <div>
+            <h1 className="text-3xl font-bold text-white">Plantillas de Notificaciones</h1>
+            <p className="text-gray-200">Personaliza tus notificaciones para diferentes canales</p>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Lista de plantillas */}
-            <div className="space-y-4">
-              <h3 className="text-white font-medium">Plantillas Disponibles</h3>
-              <div className="space-y-2">
-                {templates.map((template) => (
-                  <div
-                    key={template.id}
-                    className={`p-4 rounded-lg border cursor-pointer transition-colors ${
-                      selectedTemplate?.id === template.id
-                        ? "border-cyan-400 bg-cyan-400/10"
-                        : "border-white/10 bg-white/5 hover:bg-white/10"
-                    }`}
-                    onClick={() => setSelectedTemplate(template)}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">{template.icon}</span>
-                        <h4 className="text-white font-medium">{template.name}</h4>
-                        {template.isDefault && <Badge className="bg-blue-500 text-xs">Por defecto</Badge>}
+        </div>
+      </div>
+
+      <Tabs defaultValue="all">
+        <div className="flex justify-between items-center mb-4">
+          <TabsList>
+            <TabsTrigger value="all">Todas</TabsTrigger>
+            <TabsTrigger value="push">Push</TabsTrigger>
+            <TabsTrigger value="email">Email</TabsTrigger>
+            <TabsTrigger value="in-app">In-App</TabsTrigger>
+            <TabsTrigger value="sms">SMS</TabsTrigger>
+          </TabsList>
+          <Button className="bg-gradient-to-r from-green-500 to-emerald-500">
+            <Plus className="h-4 w-4 mr-2" />
+            Nueva Plantilla
+          </Button>
+        </div>
+
+        <TabsContent value="all" className="space-y-6">
+          {/* Categorías de plantillas */}
+          {Object.entries(categoryIcons).map(([category, Icon]) => (
+            <div key={category} className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Icon className="h-5 w-5 text-white" />
+                <h3 className="text-lg font-medium text-white capitalize">{category}</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {templates
+                  .filter((template) => template.category === category)
+                  .map((template) => (
+                    <Card
+                      key={template.id}
+                      className={`bg-white/5 backdrop-blur-sm border-white/10 ${!template.isActive ? "opacity-60" : ""}`}
+                    >
+                      <CardHeader className="pb-2">
+                        <div className="flex justify-between items-start">
+                          <div className="space-y-1">
+                            <CardTitle className="text-white flex items-center gap-2">
+                              {template.icon && <span>{template.icon}</span>}
+                              {template.name}
+                            </CardTitle>
+                            <div className="flex items-center gap-2">
+                              <Badge className="bg-gray-700 text-white">
+                                <div className="flex items-center gap-1">
+                                  {typeIcons[template.type] &&
+                                    React.createElement(typeIcons[template.type], { className: "h-3 w-3 mr-1" })}
+                                  {template.type}
+                                </div>
+                              </Badge>
+                              {template.isDefault && <Badge className="bg-blue-600">Por defecto</Badge>}
+                            </div>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditTemplate(template)}
+                              className="h-8 w-8 text-gray-400 hover:text-white"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleToggleActive(template.id)}
+                              className="h-8 w-8 text-gray-400 hover:text-white"
+                            >
+                              {template.isActive ? <Eye className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </Button>
+                            {!template.isDefault && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteTemplate(template.id)}
+                                className="h-8 w-8 text-gray-400 hover:text-white hover:bg-red-500/20"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-sm text-gray-300 line-clamp-2 mb-3">{template.body}</div>
+                        <div className="flex flex-wrap gap-1 mb-3">
+                          {template.variables.map((variable) => (
+                            <Badge key={variable} variant="outline" className="border-gray-600 text-gray-300 text-xs">
+                              {variable}
+                            </Badge>
+                          ))}
+                        </div>
+                        <div className="flex justify-between items-center text-xs text-gray-400">
+                          <div>Modificado: {template.lastModified}</div>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs">
+                            <Eye className="h-3 w-3 mr-1" />
+                            Vista previa
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+              </div>
+            </div>
+          ))}
+        </TabsContent>
+
+        <TabsContent value="push" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {templates
+              .filter((template) => template.type === "push")
+              .map((template) => (
+                <Card
+                  key={template.id}
+                  className={`bg-white/5 backdrop-blur-sm border-white/10 ${!template.isActive ? "opacity-60" : ""}`}
+                >
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-1">
+                        <CardTitle className="text-white flex items-center gap-2">
+                          {template.icon && <span>{template.icon}</span>}
+                          {template.name}
+                        </CardTitle>
+                        <Badge className="bg-gray-700 text-white">
+                          <div className="flex items-center gap-1">
+                            <Smartphone className="h-3 w-3 mr-1" />
+                            Push
+                          </div>
+                        </Badge>
                       </div>
-                      <div className="flex items-center gap-1">
-                        {getChannelIcon(template.channel)}
-                        <Badge className={`${getTypeColor(template.type)} text-xs`}>{template.type}</Badge>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-400 truncate">{template.body}</p>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-xs text-gray-500">{template.variables.length} variables</span>
                       <div className="flex gap-1">
                         <Button
                           variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedTemplate(template)
-                            setIsEditing(true)
-                          }}
-                          className="h-6 w-6 p-0 text-gray-400 hover:text-white"
+                          size="icon"
+                          onClick={() => handleEditTemplate(template)}
+                          className="h-8 w-8 text-gray-400 hover:text-white"
                         >
-                          <Edit className="h-3 w-3" />
+                          <Edit className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            duplicateTemplate(template)
-                          }}
-                          className="h-6 w-6 p-0 text-gray-400 hover:text-white"
+                          size="icon"
+                          onClick={() => handleToggleActive(template.id)}
+                          className="h-8 w-8 text-gray-400 hover:text-white"
                         >
-                          <Copy className="h-3 w-3" />
+                          {template.isActive ? <Eye className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
                         {!template.isDefault && (
                           <Button
                             variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              deleteTemplate(template.id)
-                            }}
-                            className="h-6 w-6 p-0 text-red-400 hover:text-red-300"
+                            size="icon"
+                            onClick={() => handleDeleteTemplate(template.id)}
+                            className="h-8 w-8 text-gray-400 hover:text-white hover:bg-red-500/20"
                           >
-                            <Trash2 className="h-3 w-3" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Editor/Preview de plantilla */}
-            <div className="space-y-4">
-              {selectedTemplate ? (
-                <Tabs defaultValue="preview" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="preview">Vista Previa</TabsTrigger>
-                    <TabsTrigger value="edit">Editar</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="preview" className="space-y-4">
-                    <div className="space-y-4">
-                      <h3 className="text-white font-medium">Vista Previa</h3>
-
-                      {/* Datos de prueba para preview */}
-                      <div className="space-y-2">
-                        <Label className="text-white text-sm">Datos de prueba:</Label>
-                        <div className="grid grid-cols-2 gap-2">
-                          {selectedTemplate.variables.map((variable) => (
-                            <Input
-                              key={variable}
-                              placeholder={variable}
-                              value={previewData[variable] || ""}
-                              onChange={(e) =>
-                                setPreviewData({
-                                  ...previewData,
-                                  [variable]: e.target.value,
-                                })
-                              }
-                              className="bg-white/5 border-white/10 text-white text-xs"
-                            />
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Preview de la notificación */}
-                      <div className="p-4 bg-white/5 rounded-lg border border-white/10">
-                        <div className="flex items-start gap-3">
-                          <div
-                            className="w-8 h-8 rounded-full flex items-center justify-center text-white"
-                            style={{ backgroundColor: selectedTemplate.color }}
-                          >
-                            <span>{selectedTemplate.icon}</span>
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="text-white font-medium text-sm">{renderPreview(selectedTemplate).title}</h4>
-                            <p className="text-gray-300 text-sm mt-1">{renderPreview(selectedTemplate).body}</p>
-                            <div className="flex items-center gap-2 mt-2">
-                              <Badge className={`${getTypeColor(selectedTemplate.type)} text-xs`}>
-                                {selectedTemplate.type}
-                              </Badge>
-                              <span className="text-xs text-gray-500">{getChannelIcon(selectedTemplate.channel)}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-sm text-gray-300 line-clamp-2 mb-3">{template.body}</div>
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {template.variables.map((variable) => (
+                        <Badge key={variable} variant="outline" className="border-gray-600 text-gray-300 text-xs">
+                          {variable}
+                        </Badge>
+                      ))}
                     </div>
-                  </TabsContent>
-
-                  <TabsContent value="edit" className="space-y-4">
-                    <div className="space-y-4">
-                      <h3 className="text-white font-medium">Editar Plantilla</h3>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="text-white">Nombre</Label>
-                          <Input
-                            value={selectedTemplate.name}
-                            onChange={(e) =>
-                              updateTemplate({
-                                ...selectedTemplate,
-                                name: e.target.value,
-                              })
-                            }
-                            className="bg-white/5 border-white/10 text-white"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-white">Tipo</Label>
-                          <Select
-                            value={selectedTemplate.type}
-                            onValueChange={(value) =>
-                              updateTemplate({
-                                ...selectedTemplate,
-                                type: value as any,
-                              })
-                            }
-                          >
-                            <SelectTrigger className="bg-white/5 border-white/10 text-white">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="sales">Ventas</SelectItem>
-                              <SelectItem value="orders">Pedidos</SelectItem>
-                              <SelectItem value="messages">Mensajes</SelectItem>
-                              <SelectItem value="followers">Seguidores</SelectItem>
-                              <SelectItem value="system">Sistema</SelectItem>
-                              <SelectItem value="marketing">Marketing</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="text-white">Canal</Label>
-                          <Select
-                            value={selectedTemplate.channel}
-                            onValueChange={(value) =>
-                              updateTemplate({
-                                ...selectedTemplate,
-                                channel: value as any,
-                              })
-                            }
-                          >
-                            <SelectTrigger className="bg-white/5 border-white/10 text-white">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="email">Email</SelectItem>
-                              <SelectItem value="push">Push</SelectItem>
-                              <SelectItem value="sms">SMS</SelectItem>
-                              <SelectItem value="inApp">En la app</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-white">Color</Label>
-                          <div className="flex gap-2">
-                            <Input
-                              type="color"
-                              value={selectedTemplate.color}
-                              onChange={(e) =>
-                                updateTemplate({
-                                  ...selectedTemplate,
-                                  color: e.target.value,
-                                })
-                              }
-                              className="w-12 h-10 bg-white/5 border-white/10"
-                            />
-                            <Input
-                              value={selectedTemplate.color}
-                              onChange={(e) =>
-                                updateTemplate({
-                                  ...selectedTemplate,
-                                  color: e.target.value,
-                                })
-                              }
-                              className="bg-white/5 border-white/10 text-white"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-white">Título</Label>
-                        <Input
-                          value={selectedTemplate.title}
-                          onChange={(e) => {
-                            const newTitle = e.target.value
-                            const variables = extractVariables(newTitle + selectedTemplate.body)
-                            updateTemplate({
-                              ...selectedTemplate,
-                              title: newTitle,
-                              variables,
-                            })
-                          }}
-                          className="bg-white/5 border-white/10 text-white"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-white">Cuerpo del mensaje</Label>
-                        <Textarea
-                          value={selectedTemplate.body}
-                          onChange={(e) => {
-                            const newBody = e.target.value
-                            const variables = extractVariables(selectedTemplate.title + newBody)
-                            updateTemplate({
-                              ...selectedTemplate,
-                              body: newBody,
-                              variables,
-                            })
-                          }}
-                          className="bg-white/5 border-white/10 text-white"
-                          rows={3}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-white">Icono (emoji)</Label>
-                        <Input
-                          value={selectedTemplate.icon}
-                          onChange={(e) =>
-                            updateTemplate({
-                              ...selectedTemplate,
-                              icon: e.target.value,
-                            })
-                          }
-                          className="bg-white/5 border-white/10 text-white"
-                          placeholder="🔔"
-                        />
-                      </div>
-
-                      {selectedTemplate.variables.length > 0 && (
-                        <div className="space-y-2">
-                          <Label className="text-white">Variables detectadas</Label>
-                          <div className="flex flex-wrap gap-2">
-                            {selectedTemplate.variables.map((variable) => (
-                              <Badge key={variable} className="bg-purple-500">
-                                {variable}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      <Button
-                        onClick={() => setIsEditing(false)}
-                        className="bg-gradient-to-r from-green-500 to-emerald-500"
-                      >
-                        <Save className="h-4 w-4 mr-2" />
-                        Guardar Cambios
+                    <div className="flex justify-between items-center text-xs text-gray-400">
+                      <div>Modificado: {template.lastModified}</div>
+                      <Button variant="ghost" size="sm" className="h-7 text-xs">
+                        <Eye className="h-3 w-3 mr-1" />
+                        Vista previa
                       </Button>
                     </div>
-                  </TabsContent>
-                </Tabs>
-              ) : (
-                <div className="p-8 text-center text-gray-400">
-                  <Type className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>Selecciona una plantilla para ver o editar</p>
-                </div>
-              )}
-            </div>
+                  </CardContent>
+                </Card>
+              ))}
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
+
+        <TabsContent value="email" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {templates
+              .filter((template) => template.type === "email")
+              .map((template) => (
+                <Card
+                  key={template.id}
+                  className={`bg-white/5 backdrop-blur-sm border-white/10 ${!template.isActive ? "opacity-60" : ""}`}
+                >
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-1">
+                        <CardTitle className="text-white flex items-center gap-2">
+                          {template.icon && <span>{template.icon}</span>}
+                          {template.name}
+                        </CardTitle>
+                        <Badge className="bg-gray-700 text-white">
+                          <div className="flex items-center gap-1">
+                            <Mail className="h-3 w-3 mr-1" />
+                            Email
+                          </div>
+                        </Badge>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditTemplate(template)}
+                          className="h-8 w-8 text-gray-400 hover:text-white"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleToggleActive(template.id)}
+                          className="h-8 w-8 text-gray-400 hover:text-white"
+                        >
+                          {template.isActive ? <Eye className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                        {!template.isDefault && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteTemplate(template.id)}
+                            className="h-8 w-8 text-gray-400 hover:text-white hover:bg-red-500/20"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-sm text-gray-300 line-clamp-2 mb-3">{template.body}</div>
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {template.variables.map((variable) => (
+                        <Badge key={variable} variant="outline" className="border-gray-600 text-gray-300 text-xs">
+                          {variable}
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex justify-between items-center text-xs text-gray-400">
+                      <div>Modificado: {template.lastModified}</div>
+                      <Button variant="ghost" size="sm" className="h-7 text-xs">
+                        <Eye className="h-3 w-3 mr-1" />
+                        Vista previa
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="in-app" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {templates
+              .filter((template) => template.type === "in-app")
+              .map((template) => (
+                <Card
+                  key={template.id}
+                  className={`bg-white/5 backdrop-blur-sm border-white/10 ${!template.isActive ? "opacity-60" : ""}`}
+                >
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-1">
+                        <CardTitle className="text-white flex items-center gap-2">
+                          {template.icon && <span>{template.icon}</span>}
+                          {template.name}
+                        </CardTitle>
+                        <Badge className="bg-gray-700 text-white">
+                          <div className="flex items-center gap-1">
+                            <Bell className="h-3 w-3 mr-1" />
+                            In-App
+                          </div>
+                        </Badge>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditTemplate(template)}
+                          className="h-8 w-8 text-gray-400 hover:text-white"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleToggleActive(template.id)}
+                          className="h-8 w-8 text-gray-400 hover:text-white"
+                        >
+                          {template.isActive ? <Eye className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                        {!template.isDefault && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteTemplate(template.id)}
+                            className="h-8 w-8 text-gray-400 hover:text-white hover:bg-red-500/20"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-sm text-gray-300 line-clamp-2 mb-3">{template.body}</div>
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {template.variables.map((variable) => (
+                        <Badge key={variable} variant="outline" className="border-gray-600 text-gray-300 text-xs">
+                          {variable}
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex justify-between items-center text-xs text-gray-400">
+                      <div>Modificado: {template.lastModified}</div>
+                      <Button variant="ghost" size="sm" className="h-7 text-xs">
+                        <Eye className="h-3 w-3 mr-1" />
+                        Vista previa
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="sms" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {templates
+              .filter((template) => template.type === "sms")
+              .map((template) => (
+                <Card
+                  key={template.id}
+                  className={`bg-white/5 backdrop-blur-sm border-white/10 ${!template.isActive ? "opacity-60" : ""}`}
+                >
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-1">
+                        <CardTitle className="text-white flex items-center gap-2">
+                          {template.icon && <span>{template.icon}</span>}
+                          {template.name}
+                        </CardTitle>
+                        <Badge className="bg-gray-700 text-white">
+                          <div className="flex items-center gap-1">
+                            <MessageSquare className="h-3 w-3 mr-1" />
+                            SMS
+                          </div>
+                        </Badge>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditTemplate(template)}
+                          className="h-8 w-8 text-gray-400 hover:text-white"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleToggleActive(template.id)}
+                          className="h-8 w-8 text-gray-400 hover:text-white"
+                        >
+                          {template.isActive ? <Eye className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                        {!template.isDefault && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteTemplate(template.id)}
+                            className="h-8 w-8 text-gray-400 hover:text-white hover:bg-red-500/20"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-sm text-gray-300 line-clamp-2 mb-3">{template.body}</div>
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {template.variables.map((variable) => (
+                        <Badge key={variable} variant="outline" className="border-gray-600 text-gray-300 text-xs">
+                          {variable}
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex justify-between items-center text-xs text-gray-400">
+                      <div>Modificado: {template.lastModified}</div>
+                      <Button variant="ghost" size="sm" className="h-7 text-xs">
+                        <Eye className="h-3 w-3 mr-1" />
+                        Vista previa
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Modal de edición */}
+      {selectedTemplate && isEditing && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <Card className="bg-white/10 backdrop-blur-sm border-white/20 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <CardHeader>
+              <CardTitle className="text-white">Editar Plantilla</CardTitle>
+              <CardDescription className="text-gray-300">
+                Personaliza el contenido y apariencia de la notificación
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-white">Nombre de la plantilla</Label>
+                    <Input
+                      value={selectedTemplate.name}
+                      onChange={(e) => setSelectedTemplate({ ...selectedTemplate, name: e.target.value })}
+                      className="bg-white/5 border-white/10 text-white"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-white">Tipo</Label>
+                    <Select
+                      value={selectedTemplate.type}
+                      onValueChange={(value: "email" | "push" | "sms" | "in-app") =>
+                        setSelectedTemplate({ ...selectedTemplate, type: value })
+                      }
+                    >
+                      <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="push">Push</SelectItem>
+                        <SelectItem value="email">Email</SelectItem>
+                        <SelectItem value="in-app">In-App</SelectItem>
+                        <SelectItem value="sms">SMS</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-white">Categoría</Label>
+                    <Select
+                      value={selectedTemplate.category}
+                      onValueChange={(value: "sales" | "orders" | "messages" | "system" | "marketing" | "social") =>
+                        setSelectedTemplate({ ...selectedTemplate, category: value })
+                      }
+                    >
+                      <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sales">Ventas</SelectItem>
+                        <SelectItem value="orders">Pedidos</SelectItem>
+                        <SelectItem value="messages">Mensajes</SelectItem>
+                        <SelectItem value="system">Sistema</SelectItem>
+                        <SelectItem value="marketing">Marketing</SelectItem>
+                        <SelectItem value="social">Social</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {selectedTemplate.type === "email" && (
+                    <div className="space-y-2">
+                      <Label className="text-white">Asunto</Label>
+                      <Input
+                        value={selectedTemplate.subject || ""}
+                        onChange={(e) => setSelectedTemplate({ ...selectedTemplate, subject: e.target.value })}
+                        className="bg-white/5 border-white/10 text-white"
+                      />
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label className="text-white">Título</Label>
+                    <Input
+                      value={selectedTemplate.title}
+                      onChange={(e) => setSelectedTemplate({ ...selectedTemplate, title: e.target.value })}
+                      className="bg-white/5 border-white/10 text-white"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-white">Contenido</Label>
+                    <Textarea
+                      value={selectedTemplate.body}
+                      onChange={(e) => setSelectedTemplate({ ...selectedTemplate, body: e.target.value })}
+                      className="bg-white/5 border-white/10 text-white"
+                      rows={4}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-white">Icono</Label>
+                    <Input
+                      value={selectedTemplate.icon || ""}
+                      onChange={(e) => setSelectedTemplate({ ...selectedTemplate, icon: e.target.value })}
+                      className="bg-white/5 border-white/10 text-white"
+                      placeholder="Emoji o código de icono"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-white">Color</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="color"
+                        value={selectedTemplate.color}
+                        onChange={(e) => setSelectedTemplate({ ...selectedTemplate, color: e.target.value })}
+                        className="w-12 h-10 p-1 bg-white/5 border-white/10"
+                      />
+                      <Input
+                        value={selectedTemplate.color}
+                        onChange={(e) => setSelectedTemplate({ ...selectedTemplate, color: e.target.value })}
+                        className="bg-white/5 border-white/10 text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-white">Variables</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedTemplate.variables.map((variable, index) => (
+                        <Badge key={index} className="bg-blue-500/20 text-blue-300 flex items-center gap-1">
+                          {variable}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-4 w-4 p-0 ml-1 hover:bg-blue-500/20"
+                            onClick={() => {
+                              const newVariables = [...selectedTemplate.variables]
+                              newVariables.splice(index, 1)
+                              setSelectedTemplate({ ...selectedTemplate, variables: newVariables })
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </Badge>
+                      ))}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-dashed border-white/20 text-white"
+                        onClick={() => {
+                          const variable = prompt("Nombre de la variable:")
+                          if (variable && !selectedTemplate.variables.includes(variable)) {
+                            setSelectedTemplate({
+                              ...selectedTemplate,
+                              variables: [...selectedTemplate.variables, variable],
+                            })
+                          }
+                        }}
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Añadir
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="bg-gray-900 rounded-lg p-4">
+                    <h3 className="text-white font-medium mb-4">Vista Previa</h3>
+                    {renderPreview(selectedTemplate)}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-white">Datos de prueba</Label>
+                    <div className="space-y-2">
+                      {selectedTemplate.variables.map((variable) => (
+                        <div key={variable} className="grid grid-cols-3 gap-2 items-center">
+                          <Label className="text-gray-300 text-sm">{variable}</Label>
+                          <Input
+                            value={previewData[variable as keyof typeof previewData] || ""}
+                            onChange={(e) => setPreviewData({ ...previewData, [variable]: e.target.value })}
+                            className="col-span-2 bg-white/5 border-white/10 text-white h-8 text-sm"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Separator className="bg-white/10" />
+
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-white">Activa</Label>
+                        <p className="text-sm text-gray-400">Esta plantilla está en uso</p>
+                      </div>
+                      <Switch
+                        checked={selectedTemplate.isActive}
+                        onCheckedChange={(checked) => setSelectedTemplate({ ...selectedTemplate, isActive: checked })}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-white">Por defecto</Label>
+                        <p className="text-sm text-gray-400">Plantilla predeterminada para este tipo</p>
+                      </div>
+                      <Switch
+                        checked={selectedTemplate.isDefault}
+                        onCheckedChange={(checked) => setSelectedTemplate({ ...selectedTemplate, isDefault: checked })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button variant="outline" className="border-white/20 text-white flex-1">
+                      <Download className="h-4 w-4 mr-2" />
+                      Exportar
+                    </Button>
+                    <Button variant="outline" className="border-white/20 text-white flex-1">
+                      <Copy className="h-4 w-4 mr-2" />
+                      Duplicar
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+            <div className="flex justify-between p-6 pt-0">
+              <Button variant="outline" onClick={() => setIsEditing(false)} className="border-white/20 text-white">
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveTemplate} className="bg-gradient-to-r from-green-500 to-emerald-500">
+                <Save className="h-4 w-4 mr-2" />
+                Guardar Cambios
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      <Button onClick={() => handleSaveSettings("templates")} className="bg-gradient-to-r from-purple-500 to-pink-500">
+        <Save className="h-4 w-4 mr-2" />
+        Guardar Configuración de Plantillas
+      </Button>
     </div>
   )
 }

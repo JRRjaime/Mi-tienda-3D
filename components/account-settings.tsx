@@ -25,7 +25,6 @@ import {
   CreditCard,
   Gift,
   FileText,
-  Users,
   Settings,
   Download,
   Share2,
@@ -42,27 +41,47 @@ import {
   Link2,
   Eye,
   BarChart3,
-  Target,
-  Plus,
   Smartphone,
   Moon,
   Type,
+  Target,
 } from "lucide-react"
 // Importar el componente de plantillas
 import { NotificationTemplates } from "@/components/notification-templates"
+import Image from "next/image"
 
 interface AccountSettingsProps {
   user: {
     name: string
     email: string
-    profileTypes: string[]
-    country: string
-    language: string
-    timezone: string
+    profileTypes?: string[]
+    role?: string
+    country?: string
+    language?: string
+    timezone?: string
   }
 }
 
 export function AccountSettings({ user }: AccountSettingsProps) {
+  // Función para obtener tipos de perfil desde el rol
+  const getProfileTypesFromRole = (role?: string) => {
+    switch (role) {
+      case "creator":
+        return ["creador"]
+      case "printer":
+        return ["impresor"]
+      case "user":
+        return ["usuario"]
+      case "admin":
+        return ["usuario", "creador", "impresor"]
+      default:
+        return ["usuario"]
+    }
+  }
+
+  // Obtener tipos de perfil de manera segura
+  const profileTypes = user.profileTypes || getProfileTypesFromRole(user.role)
+
   // Estados existentes...
   const [generalSettings, setGeneralSettings] = useState({
     language: user.language || "es",
@@ -169,7 +188,7 @@ export function AccountSettings({ user }: AccountSettingsProps) {
   })
 
   const [creatorSettings, setCreatorSettings] = useState({
-    storeName: "Tienda de Carlos",
+    storeName: "Tienda de " + user.name,
     storeDescription: "Creador de modelos 3D únicos y personalizados",
     autoApproveComments: false,
     allowCustomRequests: true,
@@ -180,7 +199,7 @@ export function AccountSettings({ user }: AccountSettingsProps) {
   })
 
   const [printerSettings, setPrinterSettings] = useState({
-    workshopName: "Taller 3D Carlos",
+    workshopName: "Taller 3D " + user.name,
     workshopDescription: "Servicios de impresión 3D profesional",
     acceptedMaterials: ["PLA", "PETG", "ABS"],
     maxPrintSize: "200x200x200mm",
@@ -228,7 +247,7 @@ export function AccountSettings({ user }: AccountSettingsProps) {
   })
 
   const [referralSettings, setReferralSettings] = useState({
-    referralCode: "CARLOS3D",
+    referralCode: user.name.toUpperCase().replace(/\s+/g, "") + "3D",
     referralBonus: 10,
     referredBonus: 5,
     totalReferrals: 12,
@@ -278,9 +297,10 @@ export function AccountSettings({ user }: AccountSettingsProps) {
     invitePending: [],
   })
 
-  const isCreator = user.profileTypes.includes("creador")
-  const isPrinter = user.profileTypes.includes("impresor")
-  const isUser = user.profileTypes.includes("usuario")
+  // Verificar tipos de perfil de manera segura
+  const isCreator = profileTypes.includes("creador")
+  const isPrinter = profileTypes.includes("impresor")
+  const isUser = profileTypes.includes("usuario")
 
   const [analyticsSettings, setAnalyticsSettings] = useState({
     // Google Analytics
@@ -394,6 +414,17 @@ export function AccountSettings({ user }: AccountSettingsProps) {
 
   return (
     <div className="space-y-6">
+      {/* Imagen de cabecera */}
+      <div className="relative w-full h-48 rounded-xl overflow-hidden mb-8">
+        <Image src="/images/settings-hero.png" alt="Configuración de cuenta" fill className="object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex items-center p-8">
+          <div>
+            <h1 className="text-3xl font-bold text-white">Configuración de Cuenta</h1>
+            <p className="text-gray-200">Personaliza tu experiencia en World 3D</p>
+          </div>
+        </div>
+      </div>
+
       <Tabs defaultValue="general" className="w-full">
         <TabsList className="grid w-full grid-cols-3 lg:grid-cols-8">
           <TabsTrigger value="general" className="flex items-center gap-2">
@@ -618,6 +649,10 @@ export function AccountSettings({ user }: AccountSettingsProps) {
                 <CardDescription className="text-gray-300">Gestiona tus tarjetas y métodos de pago</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                <div className="relative w-full h-40 mb-6 rounded-lg overflow-hidden">
+                  <Image src="/images/payment-methods.png" alt="Métodos de pago" fill className="object-cover" />
+                </div>
+
                 <div className="space-y-4">
                   <h3 className="text-white font-medium">Tarjetas Guardadas</h3>
                   {paymentSettings.savedCards.map((card) => (
@@ -1013,6 +1048,10 @@ export function AccountSettings({ user }: AccountSettingsProps) {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              <div className="relative w-full h-48 rounded-lg overflow-hidden mb-6">
+                <Image src="/images/referral-program.png" alt="Programa de referidos" fill className="object-cover" />
+              </div>
+
               {/* Estadísticas de Referidos */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card className="bg-gradient-to-r from-green-500 to-emerald-500 border-0">
@@ -1146,6 +1185,15 @@ export function AccountSettings({ user }: AccountSettingsProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                <div className="relative w-full h-40 rounded-lg overflow-hidden mb-6">
+                  <Image
+                    src="/images/notification-templates.png"
+                    alt="Plantillas de notificaciones"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+
                 {/* Configuración existente... */}
                 <div className="space-y-4">
                   <h3 className="text-white font-medium flex items-center gap-2">
@@ -1393,17 +1441,17 @@ export function AccountSettings({ user }: AccountSettingsProps) {
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
                   <Moon className="h-5 w-5" />
-                  Horarios de No Molestar
+                  No Molestar
                 </CardTitle>
                 <CardDescription className="text-gray-300">
-                  Configura cuándo no quieres recibir notificaciones
+                  Define horarios en los que no quieres recibir notificaciones
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label className="text-white">Habilitar modo silencioso</Label>
-                    <p className="text-sm text-gray-400">Silencia notificaciones durante horas específicas</p>
+                    <Label className="text-white">Activar modo no molestar</Label>
+                    <p className="text-sm text-gray-400">Silencia las notificaciones durante ciertas horas</p>
                   </div>
                   <Switch
                     checked={notificationSettings.quietHours.enabled}
@@ -1452,7 +1500,7 @@ export function AccountSettings({ user }: AccountSettingsProps) {
                     <div className="flex items-center justify-between">
                       <div>
                         <Label className="text-white">Solo fines de semana</Label>
-                        <p className="text-sm text-gray-400">Aplicar modo silencioso solo sábados y domingos</p>
+                        <p className="text-sm text-gray-400">Aplicar solo sábados y domingos</p>
                       </div>
                       <Switch
                         checked={notificationSettings.quietHours.weekendsOnly}
@@ -1471,7 +1519,7 @@ export function AccountSettings({ user }: AccountSettingsProps) {
 
             <Button
               onClick={() => handleSaveSettings("notifications")}
-              className="bg-gradient-to-r from-cyan-500 to-blue-500"
+              className="bg-gradient-to-r from-blue-500 to-purple-500"
             >
               <Save className="h-4 w-4 mr-2" />
               Guardar Configuración de Notificaciones
@@ -1488,15 +1536,13 @@ export function AccountSettings({ user }: AccountSettingsProps) {
                 Configuración de Privacidad
               </CardTitle>
               <CardDescription className="text-gray-300">
-                Controla quién puede ver tu información y actividad
+                Controla qué información es visible para otros usuarios
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Mantener contenido existente de privacidad */}
               <div className="space-y-4">
-                <h3 className="text-white font-medium">Visibilidad del Perfil</h3>
                 <div className="space-y-2">
-                  <Label className="text-white">¿Quién puede ver tu perfil?</Label>
+                  <Label className="text-white">Visibilidad del perfil</Label>
                   <Select
                     value={privacySettings.profileVisibility}
                     onValueChange={(value) => setPrivacySettings({ ...privacySettings, profileVisibility: value })}
@@ -1505,17 +1551,87 @@ export function AccountSettings({ user }: AccountSettingsProps) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="public">Público - Cualquiera puede ver</SelectItem>
-                      <SelectItem value="friends">Solo seguidores</SelectItem>
-                      <SelectItem value="private">Privado - Solo yo</SelectItem>
+                      <SelectItem value="public">Público</SelectItem>
+                      <SelectItem value="private">Privado</SelectItem>
+                      <SelectItem value="friends">Solo amigos</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-white">Mostrar historial de compras</Label>
+                    <p className="text-sm text-gray-400">Permite que otros vean tus compras públicas</p>
+                  </div>
+                  <Switch
+                    checked={privacySettings.showPurchaseHistory}
+                    onCheckedChange={(checked) =>
+                      setPrivacySettings({ ...privacySettings, showPurchaseHistory: checked })
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-white">Mostrar favoritos</Label>
+                    <p className="text-sm text-gray-400">Permite que otros vean tus modelos favoritos</p>
+                  </div>
+                  <Switch
+                    checked={privacySettings.showFavorites}
+                    onCheckedChange={(checked) => setPrivacySettings({ ...privacySettings, showFavorites: checked })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-white">Permitir mensajes</Label>
+                    <p className="text-sm text-gray-400">Otros usuarios pueden enviarte mensajes privados</p>
+                  </div>
+                  <Switch
+                    checked={privacySettings.allowMessages}
+                    onCheckedChange={(checked) => setPrivacySettings({ ...privacySettings, allowMessages: checked })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-white">Mostrar estado en línea</Label>
+                    <p className="text-sm text-gray-400">Indica cuando estás conectado</p>
+                  </div>
+                  <Switch
+                    checked={privacySettings.showOnlineStatus}
+                    onCheckedChange={(checked) => setPrivacySettings({ ...privacySettings, showOnlineStatus: checked })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-white">Recopilación de datos</Label>
+                    <p className="text-sm text-gray-400">Permitir recopilación de datos para mejorar el servicio</p>
+                  </div>
+                  <Switch
+                    checked={privacySettings.dataCollection}
+                    onCheckedChange={(checked) => setPrivacySettings({ ...privacySettings, dataCollection: checked })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-white">Seguimiento de analytics</Label>
+                    <p className="text-sm text-gray-400">Permitir seguimiento para estadísticas anónimas</p>
+                  </div>
+                  <Switch
+                    checked={privacySettings.analyticsTracking}
+                    onCheckedChange={(checked) =>
+                      setPrivacySettings({ ...privacySettings, analyticsTracking: checked })
+                    }
+                  />
                 </div>
               </div>
 
               <Button
                 onClick={() => handleSaveSettings("privacy")}
-                className="bg-gradient-to-r from-cyan-500 to-blue-500"
+                className="bg-gradient-to-r from-green-500 to-emerald-500"
               >
                 <Save className="h-4 w-4 mr-2" />
                 Guardar Configuración de Privacidad
@@ -1532,136 +1648,112 @@ export function AccountSettings({ user }: AccountSettingsProps) {
                 <FileText className="h-5 w-5" />
                 Información Legal
               </CardTitle>
-              <CardDescription className="text-gray-300">Términos, condiciones y configuración legal</CardDescription>
+              <CardDescription className="text-gray-300">
+                Gestiona tus preferencias legales y de consentimiento
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Documentos Legales */}
-              <div className="space-y-4">
-                <h3 className="text-white font-medium">Documentos y Aceptaciones</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10">
-                    <div>
-                      <Label className="text-white">Términos y Condiciones</Label>
-                      <p className="text-sm text-gray-400">Última actualización: 15 de enero, 2024</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge className="bg-green-500">Aceptado</Badge>
-                      <Button variant="outline" size="sm" className="border-white/20 text-white">
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        Ver
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10">
-                    <div>
-                      <Label className="text-white">Política de Privacidad</Label>
-                      <p className="text-sm text-gray-400">Última actualización: 15 de enero, 2024</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge className="bg-green-500">Aceptado</Badge>
-                      <Button variant="outline" size="sm" className="border-white/20 text-white">
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        Ver
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10">
-                    <div>
-                      <Label className="text-white">Política de Cookies</Label>
-                      <p className="text-sm text-gray-400">Última actualización: 10 de enero, 2024</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge className="bg-green-500">Aceptado</Badge>
-                      <Button variant="outline" size="sm" className="border-white/20 text-white">
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        Ver
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+              <div className="relative w-full h-40 rounded-lg overflow-hidden mb-6">
+                <Image src="/images/legal-documents.png" alt="Documentos legales" fill className="object-cover" />
               </div>
 
-              <Separator className="bg-white/10" />
-
-              {/* Configuración de Consentimientos */}
               <div className="space-y-4">
                 <h3 className="text-white font-medium">Consentimientos</h3>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
+                      <Label className="text-white">Términos y Condiciones</Label>
+                      <p className="text-sm text-gray-400">Aceptado el 15/03/2024</p>
+                    </div>
+                    <Badge className="bg-green-500">Aceptado</Badge>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-white">Política de Privacidad</Label>
+                      <p className="text-sm text-gray-400">Aceptado el 15/03/2024</p>
+                    </div>
+                    <Badge className="bg-green-500">Aceptado</Badge>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-white">Política de Cookies</Label>
+                      <p className="text-sm text-gray-400">Aceptado el 15/03/2024</p>
+                    </div>
+                    <Badge className="bg-green-500">Aceptado</Badge>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
                       <Label className="text-white">Consentimiento de marketing</Label>
-                      <p className="text-sm text-gray-400">Acepto recibir comunicaciones comerciales</p>
+                      <p className="text-sm text-gray-400">Recibir comunicaciones promocionales</p>
                     </div>
                     <Switch
                       checked={legalSettings.marketingConsent}
                       onCheckedChange={(checked) => setLegalSettings({ ...legalSettings, marketingConsent: checked })}
                     />
                   </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label className="text-white">Avisos de derechos de autor</Label>
-                      <p className="text-sm text-gray-400">Recibir notificaciones sobre derechos de autor</p>
-                    </div>
-                    <Switch
-                      checked={legalSettings.copyrightNotices}
-                      onCheckedChange={(checked) => setLegalSettings({ ...legalSettings, copyrightNotices: checked })}
-                    />
-                  </div>
                 </div>
               </div>
 
               <Separator className="bg-white/10" />
 
-              {/* Retención de Datos */}
               <div className="space-y-4">
-                <h3 className="text-white font-medium">Gestión de Datos</h3>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-white">Período de retención de datos</Label>
-                    <Select
-                      value={legalSettings.dataRetention}
-                      onValueChange={(value) => setLegalSettings({ ...legalSettings, dataRetention: value })}
-                    >
-                      <SelectTrigger className="bg-white/5 border-white/10 text-white">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1year">1 año</SelectItem>
-                        <SelectItem value="2years">2 años</SelectItem>
-                        <SelectItem value="5years">5 años</SelectItem>
-                        <SelectItem value="indefinite">Indefinido</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-sm text-gray-400">
-                      Tiempo que mantendremos tus datos después de cerrar tu cuenta
-                    </p>
-                  </div>
+                <h3 className="text-white font-medium">Derechos de Datos</h3>
+                <div className="space-y-2">
+                  <Label className="text-white">Retención de datos</Label>
+                  <Select
+                    value={legalSettings.dataRetention}
+                    onValueChange={(value) => setLegalSettings({ ...legalSettings, dataRetention: value })}
+                  >
+                    <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1year">1 año</SelectItem>
+                      <SelectItem value="2years">2 años</SelectItem>
+                      <SelectItem value="5years">5 años</SelectItem>
+                      <SelectItem value="indefinite">Indefinido</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                  <div className="p-4 bg-yellow-500/10 border border-yellow-400/30 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertTriangle className="h-5 w-5 text-yellow-400" />
-                      <span className="text-yellow-400 font-medium">Derecho al Olvido</span>
-                    </div>
-                    <p className="text-sm text-gray-300 mb-3">
-                      Puedes solicitar la eliminación completa de todos tus datos personales. Esta acción es
-                      irreversible y eliminará permanentemente tu cuenta.
-                    </p>
-                    <Button
-                      variant="outline"
-                      className="border-yellow-400 text-yellow-400 hover:bg-yellow-400 hover:text-black"
-                    >
-                      Solicitar Eliminación de Datos
-                    </Button>
+                <div className="space-y-4">
+                  <Button variant="outline" className="border-blue-400 text-blue-400">
+                    <Download className="h-4 w-4 mr-2" />
+                    Descargar mis datos
+                  </Button>
+                  <Button variant="outline" className="border-yellow-400 text-yellow-400">
+                    <Eye className="h-4 w-4 mr-2" />
+                    Ver datos recopilados
+                  </Button>
+                  <Button variant="outline" className="border-red-400 text-red-400">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Solicitar eliminación de cuenta
+                  </Button>
+                </div>
+              </div>
+
+              <Separator className="bg-white/10" />
+
+              <div className="space-y-4">
+                <h3 className="text-white font-medium">Propiedad Intelectual</h3>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-white">Avisos de copyright</Label>
+                    <p className="text-sm text-gray-400">Mostrar avisos de copyright en mis modelos</p>
                   </div>
+                  <Switch
+                    checked={legalSettings.copyrightNotices}
+                    onCheckedChange={(checked) => setLegalSettings({ ...legalSettings, copyrightNotices: checked })}
+                  />
                 </div>
               </div>
 
               <Button
                 onClick={() => handleSaveSettings("legal")}
-                className="bg-gradient-to-r from-cyan-500 to-blue-500"
+                className="bg-gradient-to-r from-purple-500 to-pink-500"
               >
                 <Save className="h-4 w-4 mr-2" />
                 Guardar Configuración Legal
@@ -1673,18 +1765,22 @@ export function AccountSettings({ user }: AccountSettingsProps) {
         {/* Nueva Configuración Avanzada */}
         <TabsContent value="advanced">
           <div className="space-y-6">
-            {/* API y Integraciones */}
+            {/* API y Desarrollo */}
             <Card className="bg-white/5 backdrop-blur-sm border-white/10">
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
                   <Zap className="h-5 w-5" />
-                  API y Integraciones
+                  API y Desarrollo
                 </CardTitle>
                 <CardDescription className="text-gray-300">
-                  Configuración para desarrolladores e integraciones externas
+                  Configuración para desarrolladores y integraciones
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                <div className="relative w-full h-40 rounded-lg overflow-hidden mb-6">
+                  <Image src="/images/api-integration.png" alt="Integración API" fill className="object-cover" />
+                </div>
+
                 <div className="flex items-center justify-between">
                   <div>
                     <Label className="text-white">Habilitar API</Label>
@@ -1721,7 +1817,7 @@ export function AccountSettings({ user }: AccountSettingsProps) {
                         >
                           <Copy className="h-4 w-4" />
                         </Button>
-                        <Button onClick={generateNewApiKey} className="bg-red-500 hover:bg-red-600">
+                        <Button onClick={generateNewApiKey} className="bg-blue-500 hover:bg-blue-600">
                           Regenerar
                         </Button>
                       </div>
@@ -1736,76 +1832,29 @@ export function AccountSettings({ user }: AccountSettingsProps) {
                         className="bg-white/5 border-white/10 text-white"
                       />
                     </div>
+
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" className="border-white/20 text-white">
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Documentación API
+                      </Button>
+                      <Button variant="outline" className="border-white/20 text-white">
+                        Probar Webhook
+                      </Button>
+                    </div>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Backup y Exportación */}
-            <Card className="bg-white/5 backdrop-blur-sm border-white/10">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Database className="h-5 w-5" />
-                  Backup y Exportación
-                </CardTitle>
-                <CardDescription className="text-gray-300">
-                  Gestiona copias de seguridad y exportación de datos
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-white">Backup automático</Label>
-                    <p className="text-sm text-gray-400">Crea copias de seguridad automáticas de tus datos</p>
-                  </div>
-                  <Switch
-                    checked={advancedSettings.backupEnabled}
-                    onCheckedChange={(checked) => setAdvancedSettings({ ...advancedSettings, backupEnabled: checked })}
-                  />
-                </div>
-
-                {advancedSettings.backupEnabled && (
-                  <div className="space-y-2">
-                    <Label className="text-white">Frecuencia de backup</Label>
-                    <Select
-                      value={advancedSettings.backupFrequency}
-                      onValueChange={(value) => setAdvancedSettings({ ...advancedSettings, backupFrequency: value })}
-                    >
-                      <SelectTrigger className="bg-white/5 border-white/10 text-white">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="daily">Diario</SelectItem>
-                        <SelectItem value="weekly">Semanal</SelectItem>
-                        <SelectItem value="monthly">Mensual</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                  <Button className="bg-gradient-to-r from-blue-500 to-cyan-500">
-                    <Download className="h-4 w-4 mr-2" />
-                    Exportar Datos
-                  </Button>
-                  <Button variant="outline" className="border-white/20 text-white">
-                    <Download className="h-4 w-4 mr-2" />
-                    Descargar Backup
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Seguridad Avanzada */}
+            {/* Seguridad */}
             <Card className="bg-white/5 backdrop-blur-sm border-white/10">
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
                   <Shield className="h-5 w-5" />
-                  Seguridad Avanzada
+                  Seguridad
                 </CardTitle>
-                <CardDescription className="text-gray-300">
-                  Configuración de seguridad adicional para tu cuenta
-                </CardDescription>
+                <CardDescription className="text-gray-300">Configuración de seguridad avanzada</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
@@ -1833,7 +1882,7 @@ export function AccountSettings({ user }: AccountSettingsProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-white">Lista blanca de IPs</Label>
+                    <Label className="text-white">IPs permitidas (opcional)</Label>
                     <Input
                       value={advancedSettings.ipWhitelist}
                       onChange={(e) => setAdvancedSettings({ ...advancedSettings, ipWhitelist: e.target.value })}
@@ -1842,103 +1891,100 @@ export function AccountSettings({ user }: AccountSettingsProps) {
                     />
                   </div>
                 </div>
+              </CardContent>
+            </Card>
 
+            {/* Backup y Datos */}
+            <Card className="bg-white/5 backdrop-blur-sm border-white/10">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Database className="h-5 w-5" />
+                  Backup y Datos
+                </CardTitle>
+                <CardDescription className="text-gray-300">Configuración de respaldo de datos</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label className="text-white">Modo desarrollador</Label>
-                    <p className="text-sm text-gray-400">Habilita funciones avanzadas y logs detallados</p>
+                    <Label className="text-white">Backup automático</Label>
+                    <p className="text-sm text-gray-400">Respalda automáticamente tus datos</p>
+                  </div>
+                  <Switch
+                    checked={advancedSettings.backupEnabled}
+                    onCheckedChange={(checked) => setAdvancedSettings({ ...advancedSettings, backupEnabled: checked })}
+                  />
+                </div>
+
+                {advancedSettings.backupEnabled && (
+                  <div className="space-y-2">
+                    <Label className="text-white">Frecuencia de backup</Label>
+                    <Select
+                      value={advancedSettings.backupFrequency}
+                      onValueChange={(value) => setAdvancedSettings({ ...advancedSettings, backupFrequency: value })}
+                    >
+                      <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="daily">Diario</SelectItem>
+                        <SelectItem value="weekly">Semanal</SelectItem>
+                        <SelectItem value="monthly">Mensual</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <Button variant="outline" className="border-green-400 text-green-400">
+                    <Download className="h-4 w-4 mr-2" />
+                    Crear Backup Manual
+                  </Button>
+                  <Button variant="outline" className="border-blue-400 text-blue-400">
+                    Ver Historial de Backups
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Modo Desarrollador */}
+            <Card className="bg-white/5 backdrop-blur-sm border-white/10">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Modo Desarrollador
+                </CardTitle>
+                <CardDescription className="text-gray-300">Opciones avanzadas para desarrolladores</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-white">Habilitar modo desarrollador</Label>
+                    <p className="text-sm text-gray-400">Muestra información técnica adicional</p>
                   </div>
                   <Switch
                     checked={advancedSettings.developerMode}
                     onCheckedChange={(checked) => setAdvancedSettings({ ...advancedSettings, developerMode: checked })}
                   />
                 </div>
+
+                {advancedSettings.developerMode && (
+                  <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertTriangle className="h-4 w-4 text-yellow-400" />
+                      <span className="text-yellow-400 font-medium">Advertencia</span>
+                    </div>
+                    <p className="text-sm text-gray-300">
+                      El modo desarrollador expone información técnica que podría ser sensible. Úsalo solo si sabes lo
+                      que estás haciendo.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
-            {/* Gestión de Equipos */}
-            {(isCreator || isPrinter) && (
-              <Card className="bg-white/5 backdrop-blur-sm border-white/10">
-                <CardHeader>
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    Gestión de Equipos
-                  </CardTitle>
-                  <CardDescription className="text-gray-300">
-                    Invita colaboradores para gestionar tu {isCreator ? "tienda" : "taller"}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label className="text-white">Permitir colaboradores</Label>
-                      <p className="text-sm text-gray-400">Permite que otros usuarios ayuden a gestionar tu cuenta</p>
-                    </div>
-                    <Switch
-                      checked={teamSettings.allowCollaborators}
-                      onCheckedChange={(checked) => setTeamSettings({ ...teamSettings, allowCollaborators: checked })}
-                    />
-                  </div>
-
-                  {teamSettings.allowCollaborators && (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <Label className="text-white">Máximo de colaboradores</Label>
-                          <Select
-                            value={teamSettings.maxCollaborators.toString()}
-                            onValueChange={(value) =>
-                              setTeamSettings({ ...teamSettings, maxCollaborators: Number(value) })
-                            }
-                          >
-                            <SelectTrigger className="bg-white/5 border-white/10 text-white">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="1">1 colaborador</SelectItem>
-                              <SelectItem value="3">3 colaboradores</SelectItem>
-                              <SelectItem value="5">5 colaboradores</SelectItem>
-                              <SelectItem value="10">10 colaboradores</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-white">Permisos por defecto</Label>
-                          <Select
-                            value={teamSettings.collaboratorPermissions}
-                            onValueChange={(value) =>
-                              setTeamSettings({ ...teamSettings, collaboratorPermissions: value })
-                            }
-                          >
-                            <SelectTrigger className="bg-white/5 border-white/10 text-white">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="view">Solo lectura</SelectItem>
-                              <SelectItem value="edit">Editar contenido</SelectItem>
-                              <SelectItem value="admin">Administrador</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-white">Invitar colaborador</Label>
-                        <div className="flex gap-2">
-                          <Input placeholder="email@ejemplo.com" className="bg-white/5 border-white/10 text-white" />
-                          <Button className="bg-gradient-to-r from-green-500 to-emerald-500">Invitar</Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
             <Button
               onClick={() => handleSaveSettings("advanced")}
-              className="bg-gradient-to-r from-purple-500 to-pink-500"
+              className="bg-gradient-to-r from-red-500 to-orange-500"
             >
               <Save className="h-4 w-4 mr-2" />
               Guardar Configuración Avanzada
@@ -1957,14 +2003,23 @@ export function AccountSettings({ user }: AccountSettingsProps) {
                   Google Analytics
                 </CardTitle>
                 <CardDescription className="text-gray-300">
-                  Configuración de Google Analytics y Google Tag Manager
+                  Configuración de seguimiento y análisis de datos
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                <div className="relative w-full h-40 rounded-lg overflow-hidden mb-6">
+                  <Image
+                    src="/images/analytics-dashboard.png"
+                    alt="Dashboard de analytics"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+
                 <div className="flex items-center justify-between">
                   <div>
                     <Label className="text-white">Habilitar Google Analytics</Label>
-                    <p className="text-sm text-gray-400">Activa el seguimiento con Google Analytics 4</p>
+                    <p className="text-sm text-gray-400">Seguimiento de comportamiento y conversiones</p>
                   </div>
                   <Switch
                     checked={analyticsSettings.googleAnalyticsEnabled}
@@ -1976,32 +2031,19 @@ export function AccountSettings({ user }: AccountSettingsProps) {
 
                 {analyticsSettings.googleAnalyticsEnabled && (
                   <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="text-white">ID de Google Analytics</Label>
-                      <Input
-                        value={analyticsSettings.googleAnalyticsId}
-                        onChange={(e) =>
-                          setAnalyticsSettings({ ...analyticsSettings, googleAnalyticsId: e.target.value })
-                        }
-                        placeholder="GA-XXXXXXXXX-X"
-                        className="bg-white/5 border-white/10 text-white"
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-white">Google Tag Manager</Label>
-                        <p className="text-sm text-gray-400">Usar GTM para gestión avanzada de tags</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label className="text-white">ID de Google Analytics</Label>
+                        <Input
+                          value={analyticsSettings.googleAnalyticsId}
+                          onChange={(e) =>
+                            setAnalyticsSettings({ ...analyticsSettings, googleAnalyticsId: e.target.value })
+                          }
+                          placeholder="GA-XXXXXXXXX-X"
+                          className="bg-white/5 border-white/10 text-white"
+                        />
                       </div>
-                      <Switch
-                        checked={analyticsSettings.gtmEnabled}
-                        onCheckedChange={(checked) =>
-                          setAnalyticsSettings({ ...analyticsSettings, gtmEnabled: checked })
-                        }
-                      />
-                    </div>
 
-                    {analyticsSettings.gtmEnabled && (
                       <div className="space-y-2">
                         <Label className="text-white">ID de Google Tag Manager</Label>
                         <Input
@@ -2011,62 +2053,22 @@ export function AccountSettings({ user }: AccountSettingsProps) {
                           className="bg-white/5 border-white/10 text-white"
                         />
                       </div>
-                    )}
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-white">Habilitar GTM</Label>
+                        <p className="text-sm text-gray-400">Google Tag Manager para gestión avanzada</p>
+                      </div>
+                      <Switch
+                        checked={analyticsSettings.gtmEnabled}
+                        onCheckedChange={(checked) =>
+                          setAnalyticsSettings({ ...analyticsSettings, gtmEnabled: checked })
+                        }
+                      />
+                    </div>
                   </div>
                 )}
-
-                <Separator className="bg-white/10" />
-
-                <div className="space-y-4">
-                  <h3 className="text-white font-medium">Configuración de Privacidad</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-white">Anonimizar IP</Label>
-                        <p className="text-sm text-gray-400">Cumple con GDPR anonimizando direcciones IP</p>
-                      </div>
-                      <Switch
-                        checked={analyticsSettings.anonymizeIp}
-                        onCheckedChange={(checked) =>
-                          setAnalyticsSettings({ ...analyticsSettings, anonymizeIp: checked })
-                        }
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-white">Respetar Do Not Track</Label>
-                        <p className="text-sm text-gray-400">No rastrear usuarios que han activado DNT</p>
-                      </div>
-                      <Switch
-                        checked={analyticsSettings.respectDoNotTrack}
-                        onCheckedChange={(checked) =>
-                          setAnalyticsSettings({ ...analyticsSettings, respectDoNotTrack: checked })
-                        }
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-white">Retención de datos (meses)</Label>
-                      <Select
-                        value={analyticsSettings.dataRetentionMonths.toString()}
-                        onValueChange={(value) =>
-                          setAnalyticsSettings({ ...analyticsSettings, dataRetentionMonths: Number(value) })
-                        }
-                      >
-                        <SelectTrigger className="bg-white/5 border-white/10 text-white">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="14">14 meses</SelectItem>
-                          <SelectItem value="26">26 meses</SelectItem>
-                          <SelectItem value="38">38 meses</SelectItem>
-                          <SelectItem value="50">50 meses</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
               </CardContent>
             </Card>
 
@@ -2077,16 +2079,14 @@ export function AccountSettings({ user }: AccountSettingsProps) {
                   <Target className="h-5 w-5" />
                   Métricas Personalizadas
                 </CardTitle>
-                <CardDescription className="text-gray-300">
-                  Configura qué métricas específicas quieres rastrear
-                </CardDescription>
+                <CardDescription className="text-gray-300">Configura qué métricas quieres rastrear</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
                   <h3 className="text-white font-medium">Métricas Generales</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex items-center justify-between">
-                      <Label className="text-white">Ventas y transacciones</Label>
+                      <Label className="text-white">Ventas</Label>
                       <Switch
                         checked={analyticsSettings.trackSales}
                         onCheckedChange={(checked) =>
@@ -2095,7 +2095,7 @@ export function AccountSettings({ user }: AccountSettingsProps) {
                       />
                     </div>
                     <div className="flex items-center justify-between">
-                      <Label className="text-white">Descargas de modelos</Label>
+                      <Label className="text-white">Descargas</Label>
                       <Switch
                         checked={analyticsSettings.trackDownloads}
                         onCheckedChange={(checked) =>
@@ -2121,6 +2121,15 @@ export function AccountSettings({ user }: AccountSettingsProps) {
                         }
                       />
                     </div>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-white">Conversiones</Label>
+                      <Switch
+                        checked={analyticsSettings.trackConversions}
+                        onCheckedChange={(checked) =>
+                          setAnalyticsSettings({ ...analyticsSettings, trackConversions: checked })
+                        }
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -2129,13 +2138,10 @@ export function AccountSettings({ user }: AccountSettingsProps) {
                 {/* Métricas específicas por rol */}
                 {isCreator && (
                   <div className="space-y-4">
-                    <h3 className="text-white font-medium flex items-center gap-2">
-                      <Store className="h-4 w-4" />
-                      Métricas de Creador
-                    </h3>
+                    <h3 className="text-white font-medium">Métricas de Creador</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="flex items-center justify-between">
-                        <Label className="text-white">Visualizaciones de modelos</Label>
+                        <Label className="text-white">Vistas de modelos</Label>
                         <Switch
                           checked={analyticsSettings.creatorMetrics.trackModelViews}
                           onCheckedChange={(checked) =>
@@ -2188,10 +2194,7 @@ export function AccountSettings({ user }: AccountSettingsProps) {
 
                 {isPrinter && (
                   <div className="space-y-4">
-                    <h3 className="text-white font-medium flex items-center gap-2">
-                      <Printer className="h-4 w-4" />
-                      Métricas de Impresor
-                    </h3>
+                    <h3 className="text-white font-medium">Métricas de Impresor</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="flex items-center justify-between">
                         <Label className="text-white">Finalización de trabajos</Label>
@@ -2253,13 +2256,8 @@ export function AccountSettings({ user }: AccountSettingsProps) {
             {/* Eventos Personalizados */}
             <Card className="bg-white/5 backdrop-blur-sm border-white/10">
               <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Zap className="h-5 w-5" />
-                  Eventos Personalizados
-                </CardTitle>
-                <CardDescription className="text-gray-300">
-                  Configura eventos específicos para rastrear acciones importantes
-                </CardDescription>
+                <CardTitle className="text-white">Eventos Personalizados</CardTitle>
+                <CardDescription className="text-gray-300">Configura eventos específicos para rastrear</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
@@ -2269,8 +2267,8 @@ export function AccountSettings({ user }: AccountSettingsProps) {
                       className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10"
                     >
                       <div>
-                        <Label className="text-white">{event.name}</Label>
-                        <p className="text-sm text-gray-400">{event.description}</p>
+                        <div className="text-white font-medium">{event.name}</div>
+                        <div className="text-sm text-gray-400">{event.description}</div>
                       </div>
                       <Switch
                         checked={event.enabled}
@@ -2283,34 +2281,14 @@ export function AccountSettings({ user }: AccountSettingsProps) {
                     </div>
                   ))}
                 </div>
-
-                <Button
-                  onClick={() => {
-                    const newEvent = { name: "custom_event", description: "Evento personalizado", enabled: true }
-                    setAnalyticsSettings({
-                      ...analyticsSettings,
-                      customEvents: [...analyticsSettings.customEvents, newEvent],
-                    })
-                  }}
-                  variant="outline"
-                  className="border-white/20 text-white"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Añadir Evento Personalizado
-                </Button>
               </CardContent>
             </Card>
 
             {/* Objetivos y Conversiones */}
             <Card className="bg-white/5 backdrop-blur-sm border-white/10">
               <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Target className="h-5 w-5" />
-                  Objetivos y Conversiones
-                </CardTitle>
-                <CardDescription className="text-gray-300">
-                  Define objetivos de negocio y asigna valores a las conversiones
-                </CardDescription>
+                <CardTitle className="text-white">Objetivos y Conversiones</CardTitle>
+                <CardDescription className="text-gray-300">Define objetivos de negocio y su valor</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
@@ -2320,228 +2298,90 @@ export function AccountSettings({ user }: AccountSettingsProps) {
                       className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10"
                     >
                       <div className="flex-1">
-                        <Label className="text-white">{goal.name}</Label>
-                        <p className="text-sm text-gray-400">Valor: ${goal.value}</p>
+                        <div className="text-white font-medium">{goal.name}</div>
+                        <div className="text-sm text-gray-400">Valor: ${goal.value}</div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={goal.enabled}
-                          onCheckedChange={(checked) => {
-                            const newGoals = [...analyticsSettings.conversionGoals]
-                            newGoals[index].enabled = checked
-                            setAnalyticsSettings({ ...analyticsSettings, conversionGoals: newGoals })
-                          }}
-                        />
-                        <Button variant="outline" size="sm" className="border-white/20 text-white">
-                          Editar
-                        </Button>
-                      </div>
+                      <Switch
+                        checked={goal.enabled}
+                        onCheckedChange={(checked) => {
+                          const newGoals = [...analyticsSettings.conversionGoals]
+                          newGoals[index].enabled = checked
+                          setAnalyticsSettings({ ...analyticsSettings, conversionGoals: newGoals })
+                        }}
+                      />
                     </div>
                   ))}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Reportes y Dashboards */}
+            {/* Configuración de Privacidad */}
             <Card className="bg-white/5 backdrop-blur-sm border-white/10">
               <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Reportes y Dashboards
-                </CardTitle>
+                <CardTitle className="text-white">Privacidad de Analytics</CardTitle>
                 <CardDescription className="text-gray-300">
-                  Configura reportes automáticos y dashboards personalizados
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <h3 className="text-white font-medium">Reportes Automáticos</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-white">Reportes semanales</Label>
-                        <p className="text-sm text-gray-400">Recibe un resumen semanal por email</p>
-                      </div>
-                      <Switch
-                        checked={analyticsSettings.weeklyReports}
-                        onCheckedChange={(checked) =>
-                          setAnalyticsSettings({ ...analyticsSettings, weeklyReports: checked })
-                        }
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-white">Reportes mensuales</Label>
-                        <p className="text-sm text-gray-400">Recibe un análisis mensual detallado</p>
-                      </div>
-                      <Switch
-                        checked={analyticsSettings.monthlyReports}
-                        onCheckedChange={(checked) =>
-                          setAnalyticsSettings({ ...analyticsSettings, monthlyReports: checked })
-                        }
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-white">Email para reportes</Label>
-                      <Input
-                        value={analyticsSettings.reportEmail}
-                        onChange={(e) => setAnalyticsSettings({ ...analyticsSettings, reportEmail: e.target.value })}
-                        className="bg-white/5 border-white/10 text-white"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <Separator className="bg-white/10" />
-
-                <div className="space-y-4">
-                  <h3 className="text-white font-medium">Dashboards Personalizados</h3>
-                  <div className="space-y-4">
-                    {isCreator && (
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label className="text-white">Dashboard de Creador</Label>
-                          <p className="text-sm text-gray-400">Métricas específicas para creadores</p>
-                        </div>
-                        <Switch
-                          checked={analyticsSettings.creatorDashboard}
-                          onCheckedChange={(checked) =>
-                            setAnalyticsSettings({ ...analyticsSettings, creatorDashboard: checked })
-                          }
-                        />
-                      </div>
-                    )}
-
-                    {isPrinter && (
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label className="text-white">Dashboard de Impresor</Label>
-                          <p className="text-sm text-gray-400">Métricas específicas para impresores</p>
-                        </div>
-                        <Switch
-                          checked={analyticsSettings.printerDashboard}
-                          onCheckedChange={(checked) =>
-                            setAnalyticsSettings({ ...analyticsSettings, printerDashboard: checked })
-                          }
-                        />
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-white">Dashboard de Usuario</Label>
-                        <p className="text-sm text-gray-400">Métricas generales de actividad</p>
-                      </div>
-                      <Switch
-                        checked={analyticsSettings.userDashboard}
-                        onCheckedChange={(checked) =>
-                          setAnalyticsSettings({ ...analyticsSettings, userDashboard: checked })
-                        }
-                      />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Integraciones Adicionales */}
-            <Card className="bg-white/5 backdrop-blur-sm border-white/10">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Link2 className="h-5 w-5" />
-                  Integraciones Adicionales
-                </CardTitle>
-                <CardDescription className="text-gray-300">
-                  Conecta con otras herramientas de analytics y marketing
+                  Configuración de privacidad para el seguimiento
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label className="text-white">Facebook Pixel</Label>
-                      <p className="text-sm text-gray-400">Tracking para anuncios de Facebook</p>
+                      <Label className="text-white">Anonimizar IPs</Label>
+                      <p className="text-sm text-gray-400">Oculta las direcciones IP completas</p>
                     </div>
                     <Switch
-                      checked={analyticsSettings.facebookPixelEnabled}
+                      checked={analyticsSettings.anonymizeIp}
                       onCheckedChange={(checked) =>
-                        setAnalyticsSettings({ ...analyticsSettings, facebookPixelEnabled: checked })
+                        setAnalyticsSettings({ ...analyticsSettings, anonymizeIp: checked })
                       }
                     />
                   </div>
-
-                  {analyticsSettings.facebookPixelEnabled && (
-                    <div className="space-y-2">
-                      <Label className="text-white">ID de Facebook Pixel</Label>
-                      <Input
-                        value={analyticsSettings.facebookPixelId}
-                        onChange={(e) =>
-                          setAnalyticsSettings({ ...analyticsSettings, facebookPixelId: e.target.value })
-                        }
-                        placeholder="123456789012345"
-                        className="bg-white/5 border-white/10 text-white"
-                      />
-                    </div>
-                  )}
 
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label className="text-white">Hotjar</Label>
-                      <p className="text-sm text-gray-400">Mapas de calor y grabaciones de sesión</p>
+                      <Label className="text-white">Respetar Do Not Track</Label>
+                      <p className="text-sm text-gray-400">No rastrear usuarios que lo soliciten</p>
                     </div>
                     <Switch
-                      checked={analyticsSettings.hotjarEnabled}
+                      checked={analyticsSettings.respectDoNotTrack}
                       onCheckedChange={(checked) =>
-                        setAnalyticsSettings({ ...analyticsSettings, hotjarEnabled: checked })
+                        setAnalyticsSettings({ ...analyticsSettings, respectDoNotTrack: checked })
                       }
                     />
                   </div>
-
-                  {analyticsSettings.hotjarEnabled && (
-                    <div className="space-y-2">
-                      <Label className="text-white">ID de Hotjar</Label>
-                      <Input
-                        value={analyticsSettings.hotjarId}
-                        onChange={(e) => setAnalyticsSettings({ ...analyticsSettings, hotjarId: e.target.value })}
-                        placeholder="1234567"
-                        className="bg-white/5 border-white/10 text-white"
-                      />
-                    </div>
-                  )}
 
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label className="text-white">Mixpanel</Label>
-                      <p className="text-sm text-gray-400">Analytics avanzado de eventos</p>
+                      <Label className="text-white">Consentimiento de cookies</Label>
+                      <p className="text-sm text-gray-400">Solicitar consentimiento antes de rastrear</p>
                     </div>
                     <Switch
-                      checked={analyticsSettings.mixpanelEnabled}
+                      checked={analyticsSettings.cookieConsent}
                       onCheckedChange={(checked) =>
-                        setAnalyticsSettings({ ...analyticsSettings, mixpanelEnabled: checked })
+                        setAnalyticsSettings({ ...analyticsSettings, cookieConsent: checked })
                       }
                     />
                   </div>
 
-                  {analyticsSettings.mixpanelEnabled && (
-                    <div className="space-y-2">
-                      <Label className="text-white">Token de Mixpanel</Label>
-                      <Input
-                        value={analyticsSettings.mixpanelToken}
-                        onChange={(e) => setAnalyticsSettings({ ...analyticsSettings, mixpanelToken: e.target.value })}
-                        placeholder="abcdef1234567890"
-                        className="bg-white/5 border-white/10 text-white"
-                      />
-                    </div>
-                  )}
+                  <div className="space-y-2">
+                    <Label className="text-white">Retención de datos (meses)</Label>
+                    <Input
+                      type="number"
+                      value={analyticsSettings.dataRetentionMonths}
+                      onChange={(e) =>
+                        setAnalyticsSettings({ ...analyticsSettings, dataRetentionMonths: Number(e.target.value) })
+                      }
+                      className="bg-white/5 border-white/10 text-white"
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
             <Button
               onClick={() => handleSaveSettings("analytics")}
-              className="bg-gradient-to-r from-blue-500 to-purple-500"
+              className="bg-gradient-to-r from-cyan-500 to-blue-500"
             >
               <Save className="h-4 w-4 mr-2" />
               Guardar Configuración de Analytics
@@ -2549,22 +2389,22 @@ export function AccountSettings({ user }: AccountSettingsProps) {
           </div>
         </TabsContent>
 
-        {/* Añadir el contenido de la pestaña después de la configuración de analytics: */}
+        {/* Nueva pestaña de Plantillas */}
         <TabsContent value="templates">
           <NotificationTemplates />
         </TabsContent>
 
-        {/* Configuraciones específicas por rol - Mantener las existentes */}
+        {/* Configuraciones específicas por tipo de usuario - Mantener las existentes */}
         {isCreator && (
           <TabsContent value="creator">
             <Card className="bg-white/5 backdrop-blur-sm border-white/10">
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
                   <Store className="h-5 w-5" />
-                  Configuración de Tienda
+                  Configuración de Creador
                 </CardTitle>
                 <CardDescription className="text-gray-300">
-                  Configura tu tienda y cómo vendes tus modelos
+                  Configura tu tienda y preferencias como creador
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -2599,12 +2439,68 @@ export function AccountSettings({ user }: AccountSettingsProps) {
                   />
                 </div>
 
+                <div className="space-y-2">
+                  <Label className="text-white">Licencia por defecto</Label>
+                  <Select
+                    value={creatorSettings.defaultLicense}
+                    onValueChange={(value) => setCreatorSettings({ ...creatorSettings, defaultLicense: value })}
+                  >
+                    <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="personal">Uso Personal</SelectItem>
+                      <SelectItem value="commercial">Uso Comercial</SelectItem>
+                      <SelectItem value="extended">Licencia Extendida</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-white">Auto-aprobar comentarios</Label>
+                      <p className="text-sm text-gray-400">Los comentarios aparecen sin moderación</p>
+                    </div>
+                    <Switch
+                      checked={creatorSettings.autoApproveComments}
+                      onCheckedChange={(checked) =>
+                        setCreatorSettings({ ...creatorSettings, autoApproveComments: checked })
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-white">Permitir pedidos personalizados</Label>
+                      <p className="text-sm text-gray-400">Los usuarios pueden solicitar modelos específicos</p>
+                    </div>
+                    <Switch
+                      checked={creatorSettings.allowCustomRequests}
+                      onCheckedChange={(checked) =>
+                        setCreatorSettings({ ...creatorSettings, allowCustomRequests: checked })
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-white">Mostrar ganancias públicamente</Label>
+                      <p className="text-sm text-gray-400">Otros usuarios pueden ver tus estadísticas de ventas</p>
+                    </div>
+                    <Switch
+                      checked={creatorSettings.showEarnings}
+                      onCheckedChange={(checked) => setCreatorSettings({ ...creatorSettings, showEarnings: checked })}
+                    />
+                  </div>
+                </div>
+
                 <Button
                   onClick={() => handleSaveSettings("creator")}
                   className="bg-gradient-to-r from-purple-500 to-pink-500"
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  Guardar Configuración de Tienda
+                  Guardar Configuración de Creador
                 </Button>
               </CardContent>
             </Card>
@@ -2617,10 +2513,10 @@ export function AccountSettings({ user }: AccountSettingsProps) {
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
                   <Printer className="h-5 w-5" />
-                  Configuración de Taller
+                  Configuración de Impresor
                 </CardTitle>
                 <CardDescription className="text-gray-300">
-                  Configura tu taller de impresión y servicios
+                  Configura tu taller y servicios de impresión
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -2635,12 +2531,81 @@ export function AccountSettings({ user }: AccountSettingsProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-white">Tiempo de entrega promedio</Label>
+                    <Label className="text-white">Tamaño máximo de impresión</Label>
+                    <Input
+                      value={printerSettings.maxPrintSize}
+                      onChange={(e) => setPrinterSettings({ ...printerSettings, maxPrintSize: e.target.value })}
+                      className="bg-white/5 border-white/10 text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-white">Descripción del taller</Label>
+                  <Textarea
+                    value={printerSettings.workshopDescription}
+                    onChange={(e) => setPrinterSettings({ ...printerSettings, workshopDescription: e.target.value })}
+                    className="bg-white/5 border-white/10 text-white"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-white">Tiempo promedio de entrega</Label>
                     <Input
                       value={printerSettings.averageDeliveryTime}
                       onChange={(e) => setPrinterSettings({ ...printerSettings, averageDeliveryTime: e.target.value })}
                       className="bg-white/5 border-white/10 text-white"
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-white">Pedido mínimo ($)</Label>
+                    <Input
+                      type="number"
+                      value={printerSettings.minimumOrderValue}
+                      onChange={(e) =>
+                        setPrinterSettings({ ...printerSettings, minimumOrderValue: Number(e.target.value) })
+                      }
+                      className="bg-white/5 border-white/10 text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-white">Horario de trabajo</Label>
+                  <Input
+                    value={printerSettings.workingHours}
+                    onChange={(e) => setPrinterSettings({ ...printerSettings, workingHours: e.target.value })}
+                    placeholder="9:00 - 18:00"
+                    className="bg-white/5 border-white/10 text-white"
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-white">Auto-aceptar pedidos</Label>
+                      <p className="text-sm text-gray-400">Los pedidos se aceptan automáticamente</p>
+                    </div>
+                    <Switch
+                      checked={printerSettings.autoAcceptOrders}
+                      onCheckedChange={(checked) =>
+                        setPrinterSettings({ ...printerSettings, autoAcceptOrders: checked })
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-white">Materiales aceptados</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {printerSettings.acceptedMaterials.map((material, index) => (
+                      <Badge key={index} className="bg-blue-500">
+                        {material}
+                      </Badge>
+                    ))}
                   </div>
                 </div>
 
@@ -2649,7 +2614,7 @@ export function AccountSettings({ user }: AccountSettingsProps) {
                   className="bg-gradient-to-r from-blue-500 to-cyan-500"
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  Guardar Configuración de Taller
+                  Guardar Configuración de Impresor
                 </Button>
               </CardContent>
             </Card>
@@ -2657,56 +2622,37 @@ export function AccountSettings({ user }: AccountSettingsProps) {
         )}
       </Tabs>
 
-      {/* Zona de peligro */}
-      <Card className="bg-red-500/10 border-red-400/30">
-        <CardHeader>
-          <CardTitle className="text-red-400 flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5" />
-            Zona de Peligro
-          </CardTitle>
-          <CardDescription className="text-gray-300">
-            Acciones irreversibles que afectan permanentemente tu cuenta
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {!showDeleteConfirm ? (
-            <Button
-              variant="outline"
-              className="border-red-400 text-red-400 hover:bg-red-400 hover:text-white"
-              onClick={() => setShowDeleteConfirm(true)}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Eliminar Cuenta
-            </Button>
-          ) : (
-            <div className="space-y-4 p-4 bg-red-500/20 rounded-lg border border-red-400/50">
-              <div className="text-red-400 font-medium">¿Estás seguro de que quieres eliminar tu cuenta?</div>
-              <p className="text-sm text-gray-300">
-                Esta acción no se puede deshacer. Se eliminarán permanentemente todos tus datos, modelos, pedidos y
-                configuraciones.
-              </p>
+      {/* Modal de confirmación para eliminar cuenta */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="bg-white/10 backdrop-blur-sm border-white/20 max-w-md">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-400" />
+                Confirmar Eliminación
+              </CardTitle>
+              <CardDescription className="text-gray-300">
+                Esta acción no se puede deshacer. Se eliminarán todos tus datos permanentemente.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="flex gap-2">
                 <Button
                   variant="outline"
-                  className="border-red-400 text-red-400 hover:bg-red-400 hover:text-white"
-                  onClick={() => {
-                    console.log("Eliminando cuenta...")
-                  }}
-                >
-                  Sí, eliminar mi cuenta
-                </Button>
-                <Button
-                  variant="outline"
-                  className="border-white/20 text-white hover:bg-white/10"
                   onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 border-white/20 text-white"
                 >
                   Cancelar
                 </Button>
+                <Button className="flex-1 bg-red-500 hover:bg-red-600">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Eliminar Cuenta
+                </Button>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,15 +1,13 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
-import { Heart, MessageCircle, Download, Star, Eye, Search, Edit, Trash2, MoreVertical } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Search } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
 import { useToast } from "@/hooks/use-toast"
+import { EnhancedProductCard } from "./enhanced-product-card"
 
 interface CategoryProjectsProps {
   categoria: string
@@ -22,13 +20,13 @@ const currentUser = {
   profileTypes: ["creador", "usuario"],
 }
 
-// Datos expandidos de proyectos con más variedad
+// Datos expandidos de proyectos con imágenes reales
 const allProjects = [
   {
     id: 1,
     title: "Figura de Dragon Ball Z - Goku Super Saiyan",
     description: "Figura coleccionable de Goku en pose de combate, impresa en PLA con detalles pintados a mano",
-    image: "/placeholder.svg?height=300&width=300",
+    image: "/images/goku-figure.png",
     author: "Carlos Mendez", // Este es del usuario actual
     authorAvatar: "/placeholder.svg?height=40&width=40",
     likes: 234,
@@ -44,13 +42,13 @@ const allProjects = [
     category: "figuras-accion",
     status: "published",
     earnings: 156.88,
-    isOwner: true, // Indica que es del usuario actual
+    isOwner: true,
   },
   {
     id: 2,
     title: "Figura de Naruto - Modo Sabio",
     description: "Figura detallada de Naruto en modo sabio con efectos de chakra",
-    image: "/placeholder.svg?height=300&width=300",
+    image: "/images/naruto-figure.png",
     author: "Ana Rodriguez",
     authorAvatar: "/placeholder.svg?height=40&width=40",
     likes: 189,
@@ -69,9 +67,30 @@ const allProjects = [
   },
   {
     id: 3,
+    title: "Casco de Anime Personalizado",
+    description: "Casco detallado inspirado en anime con acabado profesional",
+    image: "/images/anime-helmet.png",
+    author: "Miguel Torres",
+    authorAvatar: "/placeholder.svg?height=40&width=40",
+    likes: 167,
+    comments: 23,
+    downloads: 567,
+    rating: 4.6,
+    views: 3100,
+    tags: ["Anime", "Casco", "Cosplay", "Detallado"],
+    difficulty: "Avanzado",
+    printTime: "12 horas",
+    material: "PLA+",
+    price: 18.99,
+    category: "figuras-accion",
+    status: "published",
+    isOwner: false,
+  },
+  {
+    id: 4,
     title: "Modelo 3D Decorativo - Jarrón Geométrico",
     description: "Elegante jarrón con diseño geométrico moderno para decoración",
-    image: "/placeholder.svg?height=300&width=300",
+    image: "/images/geometric-vase.png",
     author: "Carlos Mendez", // Otro modelo del usuario actual
     authorAvatar: "/placeholder.svg?height=40&width=40",
     likes: 156,
@@ -90,10 +109,31 @@ const allProjects = [
     isOwner: true,
   },
   {
-    id: 4,
+    id: 5,
+    title: "Lámpara Decorativa Moderna",
+    description: "Lámpara con diseño contemporáneo y patrones únicos de luz",
+    image: "/images/decorative-lamp.png",
+    author: "Laura Vega",
+    authorAvatar: "/placeholder.svg?height=40&width=40",
+    likes: 298,
+    comments: 41,
+    downloads: 723,
+    rating: 4.8,
+    views: 4500,
+    tags: ["Lámpara", "Decoración", "Moderno", "Iluminación"],
+    difficulty: "Intermedio",
+    printTime: "5 horas",
+    material: "PLA",
+    price: 14.99,
+    category: "modelos-decorativos",
+    status: "published",
+    isOwner: false,
+  },
+  {
+    id: 6,
     title: "Engranaje Industrial Personalizado",
     description: "Engranaje de precisión para maquinaria industrial, diseñado con tolerancias específicas",
-    image: "/placeholder.svg?height=300&width=300",
+    image: "/images/industrial-gear.png",
     author: "Luis García",
     authorAvatar: "/placeholder.svg?height=40&width=40",
     likes: 89,
@@ -111,10 +151,31 @@ const allProjects = [
     isOwner: false,
   },
   {
-    id: 5,
+    id: 7,
+    title: "Componente Mecánico de Precisión",
+    description: "Pieza mecánica de alta precisión para aplicaciones industriales",
+    image: "/images/mechanical-part.png",
+    author: "Roberto Silva",
+    authorAvatar: "/placeholder.svg?height=40&width=40",
+    likes: 134,
+    comments: 18,
+    downloads: 389,
+    rating: 4.8,
+    views: 2800,
+    tags: ["Mecánico", "Precisión", "Industrial", "Componente"],
+    difficulty: "Avanzado",
+    printTime: "6 horas",
+    material: "ABS",
+    price: 32.5,
+    category: "prototipos-industriales",
+    status: "published",
+    isOwner: false,
+  },
+  {
+    id: 8,
     title: "Organizador de Escritorio Modular",
     description: "Sistema modular de organización para escritorio con compartimentos personalizables",
-    image: "/placeholder.svg?height=300&width=300",
+    image: "/images/desk-organizer.png",
     author: "Sofia Martinez",
     authorAvatar: "/placeholder.svg?height=40&width=40",
     likes: 312,
@@ -132,10 +193,31 @@ const allProjects = [
     isOwner: false,
   },
   {
-    id: 6,
+    id: 9,
+    title: "Soporte para Teléfono Ajustable",
+    description: "Soporte ergonómico y ajustable para dispositivos móviles",
+    image: "/images/phone-stand.png",
+    author: "David Chen",
+    authorAvatar: "/placeholder.svg?height=40&width=40",
+    likes: 445,
+    comments: 89,
+    downloads: 1890,
+    rating: 4.7,
+    views: 7200,
+    tags: ["Soporte", "Teléfono", "Ajustable", "Ergonómico"],
+    difficulty: "Fácil",
+    printTime: "2 horas",
+    material: "PLA",
+    price: 4.99,
+    category: "hogar-organizacion",
+    status: "published",
+    isOwner: false,
+  },
+  {
+    id: 10,
     title: "Anillo de Compromiso Personalizado",
     description: "Elegante anillo con diseño personalizable y grabado opcional",
-    image: "/placeholder.svg?height=300&width=300",
+    image: "/images/custom-ring.png",
     author: "Elena Ruiz",
     authorAvatar: "/placeholder.svg?height=40&width=40",
     likes: 445,
@@ -153,10 +235,31 @@ const allProjects = [
     isOwner: false,
   },
   {
-    id: 7,
+    id: 11,
+    title: "Colgante Geométrico Elegante",
+    description: "Colgante con diseño geométrico moderno para uso diario",
+    image: "/images/pendant-jewelry.png",
+    author: "Carmen López",
+    authorAvatar: "/placeholder.svg?height=40&width=40",
+    likes: 278,
+    comments: 34,
+    downloads: 456,
+    rating: 4.6,
+    views: 2900,
+    tags: ["Colgante", "Geométrico", "Elegante", "Moderno"],
+    difficulty: "Intermedio",
+    printTime: "1.5 horas",
+    material: "Resina",
+    price: 12.99,
+    category: "joyeria-accesorios",
+    status: "published",
+    isOwner: false,
+  },
+  {
+    id: 12,
     title: "Prototipo de Drone - En Revisión",
     description: "Modelo de drone personalizado para pruebas aerodinámicas",
-    image: "/placeholder.svg?height=300&width=300",
+    image: "/images/drone-prototype.png",
     author: "Carlos Mendez", // Modelo pendiente del usuario actual
     authorAvatar: "/placeholder.svg?height=40&width=40",
     likes: 12,
@@ -349,158 +452,27 @@ export function CategoryProjects({ categoria }: CategoryProjectsProps) {
       {filteredProjects.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProjects.map((project) => (
-            <Card
+            <EnhancedProductCard
               key={project.id}
-              className={`group overflow-hidden backdrop-blur-sm border transition-all duration-300 hover:scale-105 ${
-                project.isOwner
-                  ? "bg-purple-500/10 border-purple-400/30 hover:border-purple-400/50"
-                  : "bg-white/5 border-white/10 hover:border-white/20"
-              }`}
-            >
-              <div className="relative">
-                <img
-                  src={project.image || "/placeholder.svg"}
-                  alt={project.title}
-                  className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
-                />
-                <div className="absolute top-2 right-2 flex gap-2">
-                  {project.isOwner && getStatusBadge(project.status)}
-                  {!project.isOwner && <Badge className="bg-black/50 text-white">{project.difficulty}</Badge>}
-                </div>
-                <div className="absolute bottom-2 left-2 flex items-center gap-2 text-white text-sm">
-                  <Eye className="h-4 w-4" />
-                  <span>{project.views.toLocaleString()}</span>
-                </div>
-                {project.isOwner && (
-                  <div className="absolute top-2 left-2">
-                    <Badge className="bg-purple-500">Mi Modelo</Badge>
-                  </div>
-                )}
-              </div>
-
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <CardTitle
-                    className={`text-lg line-clamp-2 transition-colors ${
-                      project.isOwner
-                        ? "text-purple-300 group-hover:text-purple-200"
-                        : "text-white group-hover:text-cyan-400"
-                    }`}
-                  >
-                    {project.title}
-                  </CardTitle>
-                  <div className="flex items-center gap-2">
-                    {project.status === "published" && (
-                      <div className="flex items-center gap-1 text-yellow-400 text-sm">
-                        <Star className="h-4 w-4 fill-current" />
-                        <span>{project.rating}</span>
-                      </div>
-                    )}
-                    {project.isOwner && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-400">
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Eliminar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                </div>
-                <CardDescription className="text-gray-300 line-clamp-2">{project.description}</CardDescription>
-              </CardHeader>
-
-              <CardContent className="space-y-4">
-                {/* Autor */}
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src={project.authorAvatar || "/placeholder.svg"} />
-                    <AvatarFallback>{project.author.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <span className={project.isOwner ? "text-purple-300 text-sm" : "text-gray-400 text-sm"}>
-                    {project.author}
-                  </span>
-                </div>
-
-                {/* Tags */}
-                <div className="flex flex-wrap gap-1">
-                  {project.tags.slice(0, 3).map((tag) => (
-                    <Badge
-                      key={tag}
-                      variant="outline"
-                      className={
-                        project.isOwner
-                          ? "text-xs text-purple-400 border-purple-400/30"
-                          : "text-xs text-cyan-400 border-cyan-400/30"
-                      }
-                    >
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-
-                {/* Detalles técnicos */}
-                <div className="grid grid-cols-2 gap-2 text-xs text-gray-400">
-                  <div>Tiempo: {project.printTime}</div>
-                  <div>Material: {project.material}</div>
-                </div>
-
-                {/* Precio y ganancias */}
-                <div className="flex items-center justify-between">
-                  <div className={`text-2xl font-bold ${project.isOwner ? "text-purple-400" : "text-cyan-400"}`}>
-                    ${project.price}
-                  </div>
-                  {project.isOwner && project.earnings > 0 && (
-                    <div className="text-sm text-green-400">Ganado: ${project.earnings.toFixed(2)}</div>
-                  )}
-                </div>
-
-                {/* Acciones */}
-                <div className="flex items-center justify-between pt-2 border-t border-white/10">
-                  <div className="flex items-center gap-4 text-gray-400">
-                    <button className="flex items-center gap-1 hover:text-red-400 transition-colors">
-                      <Heart className="h-4 w-4" />
-                      <span className="text-sm">{project.likes}</span>
-                    </button>
-                    <button className="flex items-center gap-1 hover:text-blue-400 transition-colors">
-                      <MessageCircle className="h-4 w-4" />
-                      <span className="text-sm">{project.comments}</span>
-                    </button>
-                    <div className="flex items-center gap-1">
-                      <Download className="h-4 w-4" />
-                      <span className="text-sm">{project.downloads}</span>
-                    </div>
-                  </div>
-                  {project.isOwner ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-purple-400 text-purple-400 hover:bg-purple-400 hover:text-white"
-                    >
-                      Ver Estadísticas
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      onClick={() => handleBuyProduct(project)}
-                      className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600"
-                    >
-                      Comprar
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+              id={project.id.toString()}
+              title={project.title}
+              description={project.description}
+              image={project.image}
+              author={project.author}
+              authorAvatar={project.authorAvatar}
+              likes={project.likes}
+              comments={project.comments}
+              downloads={project.downloads}
+              rating={project.rating}
+              views={project.views}
+              tags={project.tags}
+              difficulty={project.difficulty}
+              printTime={project.printTime}
+              material={project.material}
+              price={project.price}
+              category={project.category}
+              isOwner={project.isOwner}
+            />
           ))}
         </div>
       ) : (

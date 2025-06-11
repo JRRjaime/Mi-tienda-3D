@@ -7,7 +7,9 @@ import { CreditCard, Plus, ArrowUpRight, ArrowDownLeft, Wallet } from "lucide-re
 
 interface UserWalletProps {
   user: {
-    balance: number
+    balance?: number // Hacemos que balance sea opcional
+    email?: string
+    name?: string
   }
 }
 
@@ -47,6 +49,9 @@ const transactions = [
 ]
 
 export function UserWallet({ user }: UserWalletProps) {
+  // Valor predeterminado para balance si es undefined
+  const balance = user?.balance || 0
+
   return (
     <div className="space-y-6">
       {/* Saldo actual */}
@@ -57,7 +62,7 @@ export function UserWallet({ user }: UserWalletProps) {
             <Wallet className="h-4 w-4 text-white" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">${user.balance.toFixed(2)}</div>
+            <div className="text-2xl font-bold text-white">${balance.toFixed(2)}</div>
             <p className="text-xs text-white/80">Disponible para usar</p>
           </CardContent>
         </Card>
