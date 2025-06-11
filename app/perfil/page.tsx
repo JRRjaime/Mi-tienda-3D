@@ -6,7 +6,6 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -35,6 +34,8 @@ import { AnalyticsDashboard } from "@/components/analytics-dashboard"
 import { NotificationSystem } from "@/components/notification-system"
 import { ChatSystem } from "@/components/chat/chat-system"
 import { useAuth } from "@/contexts/auth-context"
+// Importar el nuevo componente de foto de perfil
+import { ProfilePhotoUpload } from "@/components/profile/profile-photo-upload"
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("perfil")
@@ -214,10 +215,8 @@ export default function ProfilePage() {
           <div className="lg:col-span-1">
             <Card className="bg-white/5 backdrop-blur-sm border-white/10">
               <CardHeader className="text-center">
-                <Avatar className="h-24 w-24 mx-auto mb-4">
-                  <AvatarImage src={user.avatar || "/placeholder.svg"} />
-                  <AvatarFallback className="text-2xl">{user.name.charAt(0)}</AvatarFallback>
-                </Avatar>
+                {/* Usar el nuevo componente de foto de perfil */}
+                <ProfilePhotoUpload currentPhoto={user.avatar} userName={user.name} />
                 <CardTitle className="text-white">{user.name}</CardTitle>
                 <CardDescription className="text-gray-300">{user.email}</CardDescription>
                 <div className="flex flex-wrap justify-center gap-2 mt-2">{getProfileBadges()}</div>

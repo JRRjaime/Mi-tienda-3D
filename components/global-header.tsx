@@ -18,7 +18,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Search, User, LogOut, Settings, Menu, Bell, Heart, Upload, Users, Wrench } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { AuthModal } from "@/components/auth/auth-modal"
-import { CartSystem } from "@/components/cart/cart-system"
+import { EnhancedCartSystem } from "@/components/cart/enhanced-cart-system"
 import { useAuth } from "@/contexts/auth-context"
 
 export function GlobalHeader() {
@@ -92,7 +92,7 @@ export function GlobalHeader() {
               </Button>
 
               {/* Carrito */}
-              <CartSystem />
+              <EnhancedCartSystem />
 
               {/* Usuario autenticado */}
               {isAuthenticated && user ? (

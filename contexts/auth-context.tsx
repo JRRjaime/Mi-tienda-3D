@@ -35,6 +35,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>
   register: (name: string, email: string, password: string, role: "user" | "creator" | "printer") => Promise<boolean>
   logout: () => void
+  updateUserPhoto: (photoUrl: string) => Promise<void>
 }
 
 // Función para generar perfil preconfigurado según el rol
@@ -46,20 +47,20 @@ const generateProfileData = (role: "user" | "creator" | "printer") => {
       return {
         interests: [...baseInterests, "Arte", "Modelado 3D", "Diseño Industrial"],
         stats: {
-          balance: 250.0,
+          balance: 0.0,
           totalOrders: 0,
-          totalSales: 12,
-          rating: 4.8,
+          totalSales: 0,
+          rating: 0,
         },
       }
     case "printer":
       return {
         interests: [...baseInterests, "Manufactura", "Materiales", "Ingeniería"],
         stats: {
-          balance: 180.5,
-          totalOrders: 8,
+          balance: 0.0,
+          totalOrders: 0,
           totalSales: 0,
-          rating: 4.9,
+          rating: 0,
         },
       }
     case "user":
@@ -67,10 +68,10 @@ const generateProfileData = (role: "user" | "creator" | "printer") => {
       return {
         interests: [...baseInterests, "Hogar", "Gadgets", "Personalización"],
         stats: {
-          balance: 75.25,
-          totalOrders: 3,
+          balance: 0.0,
+          totalOrders: 0,
           totalSales: 0,
-          rating: 5.0,
+          rating: 0,
         },
       }
   }
@@ -94,10 +95,10 @@ const MOCK_USERS = [
       publicProfile: true,
     },
     stats: {
-      balance: 250.0,
+      balance: 0.0,
       totalOrders: 0,
-      totalSales: 12,
-      rating: 4.8,
+      totalSales: 0,
+      rating: 0,
     },
   },
   {
@@ -116,10 +117,10 @@ const MOCK_USERS = [
       publicProfile: true,
     },
     stats: {
-      balance: 180.5,
-      totalOrders: 8,
+      balance: 0.0,
+      totalOrders: 0,
       totalSales: 0,
-      rating: 4.9,
+      rating: 0,
     },
   },
   {
@@ -138,10 +139,10 @@ const MOCK_USERS = [
       publicProfile: false,
     },
     stats: {
-      balance: 75.25,
-      totalOrders: 3,
+      balance: 0.0,
+      totalOrders: 0,
       totalSales: 0,
-      rating: 5.0,
+      rating: 0,
     },
   },
 ]
@@ -292,6 +293,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
   }
 
+  const updateUserPhoto = async (photoUrl: string): Promise<void> => {
+    if (!user) return
+
+    const updatedUser = { ...user, avatar: photoUrl }
+    setUser(updatedUser)
+    localStorage.setItem("currentUser", JSON.stringify(updatedUser))
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -301,6 +310,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         register,
         logout,
+        updateUserPhoto,
       }}
     >
       {children}
