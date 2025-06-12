@@ -4,7 +4,6 @@ import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -15,11 +14,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Search, User, LogOut, Settings, Menu, Bell, Heart, Upload, Users, Wrench } from "lucide-react"
+import { Search, User, LogOut, Settings, Menu, Heart, Upload, Users, Wrench } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { AuthModal } from "@/components/auth/auth-modal"
-import { EnhancedCartSystem } from "@/components/cart/enhanced-cart-system"
 import { useAuth } from "@/contexts/auth-context"
+import { NotificationSystem } from "@/components/notification-system"
 
 export function GlobalHeader() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -91,19 +90,11 @@ export function GlobalHeader() {
                 <Search className="h-5 w-5" />
               </Button>
 
-              {/* Carrito */}
-              <EnhancedCartSystem />
-
               {/* Usuario autenticado */}
               {isAuthenticated && user ? (
                 <>
                   {/* Notificaciones */}
-                  <Button variant="ghost" size="icon" className="text-gray-300 hover:text-white relative">
-                    <Bell className="h-5 w-5" />
-                    <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-xs flex items-center justify-center p-0">
-                      3
-                    </Badge>
-                  </Button>
+                  {user && user.id && <NotificationSystem userId={user.id} userType={[user.role]} />}
 
                   {/* Menú de usuario */}
                   <DropdownMenu>

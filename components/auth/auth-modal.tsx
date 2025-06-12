@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/contexts/auth-context"
-import { Loader2 } from "lucide-react"
+import { Loader2, Zap } from "lucide-react"
 
 interface AuthModalProps {
   isOpen: boolean
@@ -20,7 +20,7 @@ interface AuthModalProps {
 
 export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [activeTab, setActiveTab] = useState<"login" | "register">("login")
-  const { login, register, isLoading } = useAuth()
+  const { login, loginDemo, register, isLoading } = useAuth()
   const router = useRouter()
 
   // Estado para formulario de inicio de sesión
@@ -65,6 +65,16 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
     }
   }
 
+  // Manejar inicio de sesión demo
+  const handleDemoLogin = async () => {
+    const success = await loginDemo()
+    if (success) {
+      onClose()
+      // Usar router.push en lugar de window.location.href
+      router.push("/bienvenida")
+    }
+  }
+
   // Manejar envío del formulario de inicio de sesión
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -90,10 +100,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
     const success = await login(loginData.email, loginData.password)
     if (success) {
       onClose()
-      // Usar setTimeout para asegurar que el modal se cierre antes de la redirección
-      setTimeout(() => {
-        window.location.href = "/productos"
-      }, 100)
+      router.push("/bienvenida")
     }
   }
 
@@ -135,10 +142,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
     if (success) {
       onClose()
-      // Usar window.location.href para forzar la navegación al mercado
-      setTimeout(() => {
-        window.location.href = "/productos"
-      }, 100)
+      router.push("/bienvenida")
     }
   }
 
@@ -160,10 +164,42 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
           </DialogDescription>
         </DialogHeader>
 
+        {/* Botón de prueba rápida */}
+        <div className="mb-4">
+          <Button
+            onClick={handleDemoLogin}
+            disabled={isLoading}
+            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creando cuenta demo...
+              </>
+            ) : (
+              <>
+                <Zap className="mr-2 h-4 w-4" />
+                Prueba Rápida - Crear Usuario Demo
+              </>
+            )}
+          </Button>
+          <p className="text-xs text-center text-gray-500 mt-2">Crea automáticamente un usuario de prueba aleatorio</p>
+        </div>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">O continúa con</span>
+          </div>
+        </div>
+
         <Tabs
           defaultValue="login"
           value={activeTab}
           onValueChange={(value) => setActiveTab(value as "login" | "register")}
+          className="mt-4"
         >
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="login">Iniciar Sesión</TabsTrigger>

@@ -42,76 +42,8 @@ interface WalletContextType {
   refreshBalance: () => Promise<void>
 }
 
-// Datos simulados de transacciones
-const MOCK_TRANSACTIONS: Transaction[] = [
-  {
-    id: "tx_001",
-    type: "income",
-    amount: 125.0,
-    description: "Venta de modelo 3D - Figura de Goku",
-    date: "2024-01-15T10:30:00Z",
-    status: "completed",
-    relatedUser: "usuario@example.com",
-    paymentMethod: "wallet",
-    metadata: {
-      orderId: "ORD_001",
-      productId: "goku-figure",
-    },
-  },
-  {
-    id: "tx_002",
-    type: "pending_income",
-    amount: 75.5,
-    description: "Pago pendiente - Servicio de impresión",
-    date: "2024-01-14T15:45:00Z",
-    status: "pending",
-    relatedUser: "cliente@example.com",
-    paymentMethod: "wallet",
-    expiresAt: "2024-01-21T15:45:00Z",
-    metadata: {
-      orderId: "ORD_002",
-      notes: "Esperando confirmación del cliente",
-    },
-  },
-  {
-    id: "tx_003",
-    type: "blocked",
-    amount: 45.0,
-    description: "Pago bloqueado - Compra de modelo industrial",
-    date: "2024-01-13T09:20:00Z",
-    status: "blocked",
-    relatedUser: "vendedor@example.com",
-    paymentMethod: "wallet",
-    expiresAt: "2024-01-20T09:20:00Z",
-    metadata: {
-      orderId: "ORD_003",
-      productId: "industrial-gear",
-    },
-  },
-  {
-    id: "tx_004",
-    type: "expense",
-    amount: -25.0,
-    description: "Compra completada - Organizador de escritorio",
-    date: "2024-01-12T14:10:00Z",
-    status: "completed",
-    relatedUser: "creador@example.com",
-    paymentMethod: "wallet",
-    metadata: {
-      orderId: "ORD_004",
-      productId: "desk-organizer",
-    },
-  },
-  {
-    id: "tx_005",
-    type: "income",
-    amount: 200.0,
-    description: "Recarga de saldo - Tarjeta de crédito",
-    date: "2024-01-10T11:00:00Z",
-    status: "completed",
-    paymentMethod: "credit_card",
-  },
-]
+// EMPEZAR SIN TRANSACCIONES - Array vacío
+const INITIAL_TRANSACTIONS: Transaction[] = []
 
 // Crear el contexto
 const WalletContext = createContext<WalletContextType | undefined>(undefined)
@@ -127,11 +59,29 @@ export const useWallet = () => {
 
 // Proveedor del contexto
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS)
+  const [transactions, setTransactions] = useState<Transaction[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
-  // Calcular balance dinámicamente
+  // Cargar transacciones del localStorage al inicializar
+  useEffect(() => {
+    const storedTransactions = localStorage.getItem("walletTransactions")
+    if (storedTransactions) {
+      try {
+        setTransactions(JSON.parse(storedTransactions))
+      } catch (error) {
+        console.error("Error parsing stored transactions:", error)
+        setTransactions([])
+      }
+    }
+  }, [])
+
+  // Guardar transacciones en localStorage cuando cambien
+  useEffect(() => {
+    localStorage.setItem("walletTransactions", JSON.stringify(transactions))
+  }, [transactions])
+
+  // Calcular balance dinámicamente (empezando en 0)
   const calculateBalance = (): WalletBalance => {
     let available = 0
     let pending = 0
@@ -162,7 +112,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const [balance, setBalance] = useState<WalletBalance>(calculateBalance())
+  const [balance, setBalance] = useState<WalletBalance>({
+    available: 0,
+    pending: 0,
+    blocked: 0,
+    total: 0,
+  })
 
   // Actualizar balance cuando cambien las transacciones
   useEffect(() => {

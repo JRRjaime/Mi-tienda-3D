@@ -78,118 +78,10 @@ export function ChatSystem({ userId, userType }: ChatSystemProps) {
   const [activeTab, setActiveTab] = useState<"all" | "users" | "creators" | "printers" | "support">("all")
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Datos de ejemplo
+  // Inicializar con arrays vacíos
   useEffect(() => {
-    // Simular contactos
-    const mockContacts: ChatContact[] = [
-      {
-        id: "1",
-        name: "Ana López",
-        avatar: "/placeholder.svg?height=40&width=40",
-        status: "online",
-        unreadCount: 3,
-        lastMessage: {
-          content: "¿Podrías hacer una versión más pequeña del modelo?",
-          timestamp: new Date(Date.now() - 5 * 60 * 1000),
-          isFromMe: false,
-        },
-        type: "user",
-      },
-      {
-        id: "2",
-        name: "Miguel Ángel",
-        avatar: "/placeholder.svg?height=40&width=40",
-        status: "offline",
-        lastSeen: new Date(Date.now() - 2 * 60 * 60 * 1000),
-        unreadCount: 0,
-        lastMessage: {
-          content: "El modelo se ve genial, gracias!",
-          timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-          isFromMe: true,
-        },
-        type: "creator",
-      },
-      {
-        id: "3",
-        name: "Laura Martínez",
-        avatar: "/placeholder.svg?height=40&width=40",
-        status: "away",
-        unreadCount: 0,
-        lastMessage: {
-          content: "Tu pedido está en proceso de impresión",
-          timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000),
-          isFromMe: false,
-        },
-        type: "printer",
-      },
-      {
-        id: "4",
-        name: "Soporte Técnico",
-        avatar: "/placeholder.svg?height=40&width=40",
-        status: "online",
-        unreadCount: 1,
-        lastMessage: {
-          content: "Hemos resuelto tu incidencia con el pago",
-          timestamp: new Date(Date.now() - 30 * 60 * 1000),
-          isFromMe: false,
-        },
-        type: "support",
-      },
-    ]
-
-    // Simular mensajes para cada contacto
-    const mockMessages: Record<string, ChatMessage[]> = {}
-    mockContacts.forEach((contact) => {
-      const contactMessages: ChatMessage[] = []
-      // Generar entre 5 y 15 mensajes aleatorios
-      const messageCount = Math.floor(Math.random() * 10) + 5
-
-      for (let i = 0; i < messageCount; i++) {
-        const isFromMe = Math.random() > 0.5
-        const timeOffset = (messageCount - i) * (Math.random() * 60 * 60 * 1000)
-
-        contactMessages.push({
-          id: `msg-${contact.id}-${i}`,
-          senderId: isFromMe ? userId : contact.id,
-          receiverId: isFromMe ? contact.id : userId,
-          content: isFromMe
-            ? [
-                "Hola, ¿cómo estás?",
-                "¿Puedes revisar este modelo?",
-                "Gracias por tu ayuda",
-                "¿Cuánto costaría imprimir esto?",
-                "Me encanta tu trabajo",
-              ][Math.floor(Math.random() * 5)]
-            : [
-                "Todo bien, ¿y tú?",
-                "Claro, lo revisaré ahora",
-                "No hay problema",
-                "Depende del tamaño y material",
-                "¡Gracias! Me alegra que te guste",
-              ][Math.floor(Math.random() * 5)],
-          timestamp: new Date(Date.now() - timeOffset),
-          status: isFromMe ? (Math.random() > 0.7 ? "read" : "delivered") : "read",
-        })
-      }
-
-      // Añadir el último mensaje que se muestra en la lista de contactos
-      if (contact.lastMessage) {
-        contactMessages.push({
-          id: `msg-${contact.id}-last`,
-          senderId: contact.lastMessage.isFromMe ? userId : contact.id,
-          receiverId: contact.lastMessage.isFromMe ? contact.id : userId,
-          content: contact.lastMessage.content,
-          timestamp: contact.lastMessage.timestamp,
-          status: contact.lastMessage.isFromMe ? "delivered" : "read",
-        })
-      }
-
-      // Ordenar mensajes por timestamp
-      mockMessages[contact.id] = contactMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
-    })
-
-    setContacts(mockContacts)
-    setMessages(mockMessages)
+    setContacts([])
+    setMessages({})
   }, [userId])
 
   // Scroll al último mensaje cuando cambia la conversación activa o llegan nuevos mensajes
@@ -360,6 +252,9 @@ export function ChatSystem({ userId, userType }: ChatSystemProps) {
   const activeContact = activeChat ? contacts.find((c) => c.id === activeChat) : null
   const chatMessages = activeChat ? messages[activeChat] || [] : []
 
+  // Calcular el total de mensajes no leídos
+  const totalUnreadCount = contacts.reduce((sum, contact) => sum + contact.unreadCount, 0)
+
   return (
     <>
       {/* Botón flotante de chat */}
@@ -370,9 +265,9 @@ export function ChatSystem({ userId, userType }: ChatSystemProps) {
           size="icon"
         >
           <MessageSquare className="h-6 w-6" />
-          {contacts.reduce((sum, contact) => sum + contact.unreadCount, 0) > 0 && (
+          {totalUnreadCount > 0 && (
             <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-xs flex items-center justify-center p-0">
-              {contacts.reduce((sum, contact) => sum + contact.unreadCount, 0)}
+              {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
             </Badge>
           )}
         </Button>
@@ -396,10 +291,8 @@ export function ChatSystem({ userId, userType }: ChatSystemProps) {
               <div className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5 text-white" />
                 <span className="font-medium text-white">Mensajes</span>
-                {contacts.reduce((sum, contact) => sum + contact.unreadCount, 0) > 0 && (
-                  <Badge className="bg-red-500 text-white">
-                    {contacts.reduce((sum, contact) => sum + contact.unreadCount, 0)}
-                  </Badge>
+                {totalUnreadCount > 0 && (
+                  <Badge className="bg-red-500 text-white">{totalUnreadCount > 99 ? "99+" : totalUnreadCount}</Badge>
                 )}
               </div>
               <Maximize2 className="h-4 w-4 text-white" />
@@ -484,9 +377,39 @@ export function ChatSystem({ userId, userType }: ChatSystemProps) {
 
                     <ScrollArea className="flex-1 px-3 py-2">
                       {sortedContacts.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                          <MessageSquare className="h-12 w-12 mb-2 opacity-50" />
-                          <p>No hay conversaciones</p>
+                        <div className="flex flex-col items-center justify-center h-full text-center p-6">
+                          <div className="text-6xl mb-4">💬</div>
+                          <div className="text-4xl mb-3">🦗</div>
+                          <h3 className="text-white font-bold text-lg mb-2">¡Silencio de Grillos! 🦗</h3>
+                          <p className="text-gray-400 mb-4">
+                            Tu bandeja de entrada está más vacía que el espacio...
+                            <br />
+                            ¡Pero eso está a punto de cambiar! 🚀
+                          </p>
+                          <div className="space-y-3 text-sm">
+                            <div className="flex items-center gap-2 text-gray-500">
+                              <span>🎨</span>
+                              <span>Los creadores te van a escribir</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-500">
+                              <span>🖨️</span>
+                              <span>Los impresores van a contactarte</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-500">
+                              <span>🛍️</span>
+                              <span>Los compradores van a preguntar</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-500">
+                              <span>🎯</span>
+                              <span>El soporte siempre está aquí</span>
+                            </div>
+                          </div>
+                          <div className="mt-6 p-4 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 rounded-lg border border-cyan-500/30">
+                            <div className="text-2xl mb-2">💡</div>
+                            <p className="text-cyan-400 font-medium text-sm">
+                              ¡Empieza a interactuar y este chat se va a llenar de conversaciones épicas! ⚡
+                            </p>
+                          </div>
                         </div>
                       ) : (
                         <div className="space-y-1">

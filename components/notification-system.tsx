@@ -65,157 +65,47 @@ export function NotificationSystem({ userId, userType }: NotificationSystemProps
   const [filter, setFilter] = useState<"all" | "unread" | "starred" | "archived">("all")
   const [typeFilter, setTypeFilter] = useState<string>("all")
   const [soundEnabled, setSoundEnabled] = useState(true)
-  const [pushEnabled, setPushEnabled] = useState(true)
+  const [pushEnabled, setPushEnabled] = useState(false)
 
-  // Simulación de notificaciones en tiempo real
-  const mockNotifications: Notification[] = [
-    {
-      id: "1",
-      type: "sales",
-      priority: "high",
-      title: "¡Nueva venta! 🎉",
-      message: "Has vendido 'Dragón Articulado' por $25.00",
-      icon: "💰",
-      color: "#10B981",
-      timestamp: new Date(Date.now() - 5 * 60 * 1000),
-      read: false,
-      archived: false,
-      starred: false,
-      actionUrl: "/ventas/12345",
-      actionText: "Ver detalles",
-      metadata: { amount: 25, modelName: "Dragón Articulado" },
-    },
-    {
-      id: "2",
-      type: "orders",
-      priority: "high",
-      title: "Nuevo pedido de impresión",
-      message: "María García solicita imprimir 'Miniatura Guerrero'",
-      icon: "🖨️",
-      color: "#3B82F6",
-      timestamp: new Date(Date.now() - 15 * 60 * 1000),
-      read: false,
-      archived: false,
-      starred: true,
-      actionUrl: "/pedidos/67890",
-      actionText: "Ver pedido",
-      metadata: { customerName: "María García", modelName: "Miniatura Guerrero" },
-    },
-    {
-      id: "3",
-      type: "messages",
-      priority: "normal",
-      title: "Nuevo mensaje",
-      message: "Carlos: ¿Podrías hacer una versión más pequeña?",
-      icon: "💬",
-      color: "#8B5CF6",
-      timestamp: new Date(Date.now() - 30 * 60 * 1000),
-      read: true,
-      archived: false,
-      starred: false,
-      actionUrl: "/mensajes/carlos",
-      actionText: "Responder",
-      metadata: { senderName: "Carlos", preview: "¿Podrías hacer una versión más pequeña?" },
-    },
-    {
-      id: "4",
-      type: "followers",
-      priority: "low",
-      title: "Nuevo seguidor",
-      message: "Ana López ahora te sigue",
-      icon: "👤",
-      color: "#F59E0B",
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      read: true,
-      archived: false,
-      starred: false,
-      actionUrl: "/perfil/ana-lopez",
-      actionText: "Ver perfil",
-      metadata: { followerName: "Ana López" },
-    },
-    {
-      id: "5",
-      type: "system",
-      priority: "high",
-      title: "Actualización de seguridad",
-      message: "Se ha detectado un inicio de sesión desde un nuevo dispositivo",
-      icon: "🔒",
-      color: "#EF4444",
-      timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
-      read: false,
-      archived: false,
-      starred: false,
-      actionUrl: "/configuracion/seguridad",
-      actionText: "Revisar",
-      metadata: { device: "iPhone 15", location: "Madrid, España" },
-    },
-  ]
-
+  // Inicializar con array vacío
   useEffect(() => {
-    setNotifications(mockNotifications)
-    setUnreadCount(mockNotifications.filter((n) => !n.read).length)
-  }, [])
-
-  // Simulación de notificaciones en tiempo real
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // Simular nueva notificación cada 30 segundos (solo para demo)
-      if (Math.random() > 0.7) {
-        const newNotification: Notification = {
-          id: Date.now().toString(),
-          type: ["sales", "orders", "messages"][Math.floor(Math.random() * 3)] as any,
-          priority: ["low", "normal", "high"][Math.floor(Math.random() * 3)] as any,
-          title: "Nueva notificación",
-          message: "Esto es una notificación de prueba en tiempo real",
-          icon: "🔔",
-          color: "#6366F1",
-          timestamp: new Date(),
-          read: false,
-          archived: false,
-          starred: false,
-        }
-
-        setNotifications((prev) => [newNotification, ...prev])
-        setUnreadCount((prev) => prev + 1)
-
-        // Mostrar notificación push si está habilitada
-        if (pushEnabled && "Notification" in window && Notification.permission === "granted") {
-          showPushNotification(newNotification)
-        }
-
-        // Reproducir sonido si está habilitado
-        if (soundEnabled) {
-          playNotificationSound()
-        }
-      }
-    }, 30000)
-
-    return () => clearInterval(interval)
-  }, [pushEnabled, soundEnabled])
+    setNotifications([])
+    setUnreadCount(0)
+  }, [userId])
 
   const showPushNotification = (notification: Notification) => {
-    new Notification(notification.title, {
-      body: notification.message,
-      icon: "/favicon.ico",
-      badge: "/favicon.ico",
-      tag: notification.type,
-      requireInteraction: notification.priority === "high",
-      silent: !soundEnabled,
-    })
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification(notification.title, {
+        body: notification.message,
+        icon: "/favicon.ico",
+        badge: "/favicon.ico",
+        tag: notification.type,
+        requireInteraction: notification.priority === "high",
+        silent: !soundEnabled,
+      })
+    }
   }
 
   const playNotificationSound = () => {
-    const audio = new Audio("/notification-sound.mp3")
-    audio.volume = 0.3
-    audio.play().catch(() => {
-      // Ignorar errores de reproducción
-    })
+    try {
+      const audio = new Audio("/notification-sound.mp3")
+      audio.volume = 0.3
+      audio.play().catch(() => {
+        // Ignorar errores de reproducción
+      })
+    } catch (error) {
+      console.error("Error playing notification sound:", error)
+    }
   }
 
   const requestNotificationPermission = async () => {
     if ("Notification" in window) {
-      const permission = await Notification.requestPermission()
-      setPushEnabled(permission === "granted")
+      try {
+        const permission = await Notification.requestPermission()
+        setPushEnabled(permission === "granted")
+      } catch (error) {
+        console.error("Error requesting notification permission:", error)
+      }
     }
   }
 
@@ -431,9 +321,39 @@ export function NotificationSystem({ userId, userType }: NotificationSystemProps
           <CardContent className="p-0">
             <ScrollArea className="h-[400px]">
               {getFilteredNotifications().length === 0 ? (
-                <div className="p-6 text-center text-gray-400">
-                  <Bell className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>No hay notificaciones</p>
+                <div className="p-8 text-center">
+                  <div className="text-6xl mb-4">🔔</div>
+                  <div className="text-4xl mb-3">😴</div>
+                  <h3 className="text-white font-bold text-lg mb-2">¡Silencio Total! 🤫</h3>
+                  <p className="text-gray-400 mb-4">
+                    Tus notificaciones están tomando una siesta...
+                    <br />
+                    ¡Pero pronto este lugar va a explotar de actividad! 🚀
+                  </p>
+                  <div className="space-y-2 text-sm text-gray-500">
+                    <div className="flex items-center justify-center gap-2">
+                      <span>💰</span>
+                      <span>Aquí aparecerán tus ventas épicas</span>
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <span>🖨️</span>
+                      <span>Pedidos de impresión súper cool</span>
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <span>💬</span>
+                      <span>Mensajes de fans admiradores</span>
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <span>👥</span>
+                      <span>Nuevos seguidores increíbles</span>
+                    </div>
+                  </div>
+                  <div className="mt-6 p-4 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-lg border border-purple-500/30">
+                    <div className="text-2xl mb-2">🎯</div>
+                    <p className="text-cyan-400 font-medium">
+                      ¡Tip Pro! Sube tu primer modelo y prepárate para la avalancha de notificaciones 📈
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-1">

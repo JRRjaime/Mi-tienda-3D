@@ -24,6 +24,12 @@ export interface User {
     totalOrders: number
     totalSales: number
     rating: number
+    modelsUploaded: number
+    totalDownloads: number
+    totalEarnings: number
+    totalViews: number
+    totalReviews: number
+    totalLikes: number
   }
 }
 
@@ -33,13 +39,15 @@ interface AuthContextType {
   isLoading: boolean
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<boolean>
+  loginDemo: () => Promise<boolean>
   register: (name: string, email: string, password: string, role: "user" | "creator" | "printer") => Promise<boolean>
   logout: () => void
   updateUserPhoto: (photoUrl: string) => Promise<void>
+  updateUserStats: (stats: Partial<User["stats"]>) => void
 }
 
-// Función para generar perfil preconfigurado según el rol
-const generateProfileData = (role: "user" | "creator" | "printer") => {
+// Función para generar perfil completamente en 0
+const generateCleanProfile = (role: "user" | "creator" | "printer") => {
   const baseInterests = ["Tecnología", "Diseño", "Innovación"]
 
   switch (role) {
@@ -47,20 +55,32 @@ const generateProfileData = (role: "user" | "creator" | "printer") => {
       return {
         interests: [...baseInterests, "Arte", "Modelado 3D", "Diseño Industrial"],
         stats: {
-          balance: 0.0,
+          balance: 0,
           totalOrders: 0,
           totalSales: 0,
           rating: 0,
+          modelsUploaded: 0,
+          totalDownloads: 0,
+          totalEarnings: 0,
+          totalViews: 0,
+          totalReviews: 0,
+          totalLikes: 0,
         },
       }
     case "printer":
       return {
         interests: [...baseInterests, "Manufactura", "Materiales", "Ingeniería"],
         stats: {
-          balance: 0.0,
+          balance: 0,
           totalOrders: 0,
           totalSales: 0,
           rating: 0,
+          modelsUploaded: 0,
+          totalDownloads: 0,
+          totalEarnings: 0,
+          totalViews: 0,
+          totalReviews: 0,
+          totalLikes: 0,
         },
       }
     case "user":
@@ -68,16 +88,89 @@ const generateProfileData = (role: "user" | "creator" | "printer") => {
       return {
         interests: [...baseInterests, "Hogar", "Gadgets", "Personalización"],
         stats: {
-          balance: 0.0,
+          balance: 0,
           totalOrders: 0,
           totalSales: 0,
           rating: 0,
+          modelsUploaded: 0,
+          totalDownloads: 0,
+          totalEarnings: 0,
+          totalViews: 0,
+          totalReviews: 0,
+          totalLikes: 0,
         },
       }
   }
 }
 
-// Datos de usuario simulados actualizados
+// Nombres y apellidos para generar usuarios aleatorios
+const NOMBRES = [
+  "Carlos",
+  "Ana",
+  "Juan",
+  "María",
+  "Luis",
+  "Carmen",
+  "Pedro",
+  "Laura",
+  "Miguel",
+  "Sofia",
+  "Diego",
+  "Elena",
+  "Pablo",
+  "Isabel",
+  "Andrés",
+  "Lucía",
+]
+const APELLIDOS = [
+  "García",
+  "Rodríguez",
+  "González",
+  "Fernández",
+  "López",
+  "Martínez",
+  "Sánchez",
+  "Pérez",
+  "Gómez",
+  "Martín",
+  "Jiménez",
+  "Ruiz",
+  "Hernández",
+  "Díaz",
+  "Moreno",
+  "Muñoz",
+]
+
+// Función para generar usuario aleatorio (TODO EN 0)
+const generateRandomUser = () => {
+  const nombre = NOMBRES[Math.floor(Math.random() * NOMBRES.length)]
+  const apellido = APELLIDOS[Math.floor(Math.random() * APELLIDOS.length)]
+  const roles: ("user" | "creator" | "printer")[] = ["user", "creator", "printer"]
+  const role = roles[Math.floor(Math.random() * roles.length)]
+  const email = `${nombre.toLowerCase()}.${apellido.toLowerCase()}@demo.com`
+
+  const profileData = generateCleanProfile(role)
+
+  return {
+    id: `demo-${Date.now()}`,
+    name: `${nombre} ${apellido}`,
+    email,
+    password: "demo123",
+    avatar: `/placeholder.svg?height=40&width=40&query=${nombre[0]}${apellido[0]}`,
+    role,
+    createdAt: new Date().toISOString(),
+    profileConfigured: true,
+    interests: profileData.interests,
+    preferences: {
+      notifications: true,
+      newsletter: role !== "printer",
+      publicProfile: role !== "user",
+    },
+    stats: profileData.stats,
+  }
+}
+
+// TODOS LOS USUARIOS EMPIEZAN EN 0 - Sin excepciones
 const MOCK_USERS = [
   {
     id: "1",
@@ -95,10 +188,16 @@ const MOCK_USERS = [
       publicProfile: true,
     },
     stats: {
-      balance: 0.0,
+      balance: 0,
       totalOrders: 0,
       totalSales: 0,
       rating: 0,
+      modelsUploaded: 0,
+      totalDownloads: 0,
+      totalEarnings: 0,
+      totalViews: 0,
+      totalReviews: 0,
+      totalLikes: 0,
     },
   },
   {
@@ -117,10 +216,16 @@ const MOCK_USERS = [
       publicProfile: true,
     },
     stats: {
-      balance: 0.0,
+      balance: 0,
       totalOrders: 0,
       totalSales: 0,
       rating: 0,
+      modelsUploaded: 0,
+      totalDownloads: 0,
+      totalEarnings: 0,
+      totalViews: 0,
+      totalReviews: 0,
+      totalLikes: 0,
     },
   },
   {
@@ -139,10 +244,16 @@ const MOCK_USERS = [
       publicProfile: false,
     },
     stats: {
-      balance: 0.0,
+      balance: 0,
       totalOrders: 0,
       totalSales: 0,
       rating: 0,
+      modelsUploaded: 0,
+      totalDownloads: 0,
+      totalEarnings: 0,
+      totalViews: 0,
+      totalReviews: 0,
+      totalLikes: 0,
     },
   },
 ]
@@ -210,7 +321,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Función de registro
+  // Función de inicio de sesión demo (TODO EN 0)
+  const loginDemo = async (): Promise<boolean> => {
+    setIsLoading(true)
+
+    // Simular una llamada a la API
+    await new Promise((resolve) => setTimeout(resolve, 1500))
+
+    // Generar usuario aleatorio con todo en 0
+    const demoUser = generateRandomUser()
+
+    // Omitir la contraseña del objeto de usuario
+    const { password: _, ...userWithoutPassword } = demoUser
+    setUser(userWithoutPassword)
+    localStorage.setItem("currentUser", JSON.stringify(userWithoutPassword))
+
+    // Mensaje personalizado según el rol
+    const roleMessages = {
+      creator: `¡Bienvenido ${userWithoutPassword.name}! Eres un creador. Sube tu primer modelo para empezar a ganar.`,
+      printer: `¡Bienvenido ${userWithoutPassword.name}! Eres un impresor. Configura tu perfil para recibir pedidos.`,
+      user: `¡Bienvenido ${userWithoutPassword.name}! Explora y compra modelos 3D increíbles.`,
+    }
+
+    toast({
+      title: "¡Cuenta demo creada!",
+      description: `¡Bienvenido ${userWithoutPassword.name}! Redirigiendo...`,
+      duration: 3000,
+    })
+
+    setIsLoading(false)
+    return true
+  }
+
+  // Función de registro (TODO EN 0)
   const register = async (
     name: string,
     email: string,
@@ -233,12 +376,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return false
     }
 
-    // Generar datos del perfil según el rol
-    const profileData = generateProfileData(role)
+    // Generar datos del perfil según el rol (TODO EN 0)
+    const profileData = generateCleanProfile(role)
 
     // Crear nuevo usuario con perfil preconfigurado
     const newUser = {
-      id: `${MOCK_USERS.length + 1}`,
+      id: `${Date.now()}`,
       name,
       email,
       password,
@@ -252,15 +395,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       interests: profileData.interests,
       preferences: {
         notifications: true,
-        newsletter: role !== "printer", // Los impresores por defecto no quieren newsletter
-        publicProfile: role !== "user", // Los usuarios por defecto tienen perfil privado
+        newsletter: role !== "printer",
+        publicProfile: role !== "user",
       },
       stats: profileData.stats,
     }
-
-    // En una aplicación real, aquí enviaríamos los datos a la API
-    // Para esta simulación, simplemente añadimos el usuario a nuestro array
-    MOCK_USERS.push(newUser)
 
     // Iniciar sesión con el nuevo usuario
     const { password: _, ...userWithoutPassword } = newUser
@@ -269,14 +408,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Mensaje personalizado según el rol
     const roleMessages = {
-      creator: "¡Bienvenido! Tu perfil de creador está listo. Puedes empezar a vender tus modelos.",
-      printer: "¡Bienvenido! Tu perfil de impresor está configurado. Puedes ofrecer servicios de impresión.",
-      user: "¡Bienvenido! Tu cuenta está lista. Explora nuestro mercado de modelos 3D.",
+      creator: "¡Bienvenido! Sube tu primer modelo para empezar a ganar dinero.",
+      printer: "¡Bienvenido! Configura tu perfil para empezar a recibir pedidos.",
+      user: "¡Bienvenido! Explora nuestro mercado de modelos 3D.",
     }
 
     toast({
       title: "Registro exitoso",
-      description: roleMessages[role],
+      description: `¡Bienvenido ${name}! Configurando tu experiencia...`,
     })
 
     setIsLoading(false)
@@ -301,6 +440,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("currentUser", JSON.stringify(updatedUser))
   }
 
+  const updateUserStats = (newStats: Partial<User["stats"]>) => {
+    if (!user) return
+
+    const updatedUser = {
+      ...user,
+      stats: { ...user.stats, ...newStats },
+    }
+    setUser(updatedUser)
+    localStorage.setItem("currentUser", JSON.stringify(updatedUser))
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -308,9 +458,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         isAuthenticated: !!user,
         login,
+        loginDemo,
         register,
         logout,
         updateUserPhoto,
+        updateUserStats,
       }}
     >
       {children}

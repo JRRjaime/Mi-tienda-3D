@@ -180,6 +180,10 @@ export function AdvancedWallet() {
     )
   }
 
+  const getFilteredNotifications = () => {
+    return transactions
+  }
+
   return (
     <div className="space-y-6">
       {/* Balance Cards */}
@@ -537,7 +541,67 @@ export function AdvancedWallet() {
             <CardContent>
               <div className="space-y-4">
                 {pendingTransactions.length === 0 ? (
-                  <div className="text-center py-8 text-gray-400">No hay transacciones pendientes</div>
+                  <div className="text-center py-12">
+                    <div className="text-6xl mb-4">💰</div>
+                    <div className="text-4xl mb-4">🏜️</div>
+                    <h3 className="text-white font-bold text-xl mb-3">¡Cartera Más Limpia que Plato de Pobre! 😅</h3>
+                    <p className="text-gray-400 mb-6 max-w-md mx-auto">
+                      Tu historial está más vacío que mi nevera los domingos... ¡Pero eso significa que estás a punto de
+                      escribir tu primera historia financiera épica! 📈
+                    </p>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                      <div className="p-4 bg-green-500/10 rounded-lg border border-green-500/20">
+                        <div className="text-2xl mb-2">💸</div>
+                        <h4 className="text-green-400 font-medium text-sm">Ingresos</h4>
+                        <p className="text-xs text-gray-500">Aquí van a llover los billetes</p>
+                      </div>
+                      <div className="p-4 bg-red-500/10 rounded-lg border border-red-500/20">
+                        <div className="text-2xl mb-2">🛒</div>
+                        <h4 className="text-red-400 font-medium text-sm">Gastos</h4>
+                        <p className="text-xs text-gray-500">Inversiones inteligentes</p>
+                      </div>
+                      <div className="p-4 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
+                        <div className="text-2xl mb-2">⏳</div>
+                        <h4 className="text-yellow-400 font-medium text-sm">Pendientes</h4>
+                        <p className="text-xs text-gray-500">Dinero en camino</p>
+                      </div>
+                      <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                        <div className="text-2xl mb-2">🔒</div>
+                        <h4 className="text-blue-400 font-medium text-sm">Seguros</h4>
+                        <p className="text-xs text-gray-500">Protección total</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 p-6 rounded-lg border border-purple-500/30 max-w-lg mx-auto">
+                      <div className="text-3xl mb-3">🎯</div>
+                      <h4 className="text-white font-bold mb-2">¡Tu Primera Transacción Será Histórica! 🏆</h4>
+                      <p className="text-gray-300 text-sm mb-4">
+                        Cada gran fortuna empezó con el primer peso. ¡El tuyo va a ser legendario! ⚡
+                      </p>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        <Badge variant="outline" className="border-cyan-400/30 text-cyan-400">
+                          <span className="mr-1">💎</span>
+                          100% Real
+                        </Badge>
+                        <Badge variant="outline" className="border-green-400/30 text-green-400">
+                          <span className="mr-1">🔒</span>
+                          Súper Seguro
+                        </Badge>
+                        <Badge variant="outline" className="border-purple-400/30 text-purple-400">
+                          <span className="mr-1">⚡</span>
+                          Súper Rápido
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <div className="mt-8 text-xs text-gray-500">
+                      <p>
+                        💡 <strong>Tip Pro:</strong> Cada número que veas aquí será 100% auténtico y ganado con tu
+                        esfuerzo 🌟
+                      </p>
+                    </div>
+                  </div>
                 ) : (
                   pendingTransactions.map((transaction) => (
                     <div key={transaction.id} className="p-4 rounded-lg bg-white/5 border border-white/10 space-y-3">
