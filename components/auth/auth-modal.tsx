@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -11,16 +11,17 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/contexts/auth-context"
-import { Loader2, Zap } from "lucide-react"
+import { Loader2, Zap, AlertCircle } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 
 interface AuthModalProps {
   isOpen: boolean
   onClose: () => void
+  defaultTab?: "login" | "register"
 }
 
-export function AuthModal({ isOpen, onClose }: AuthModalProps) {
-  const [activeTab, setActiveTab] = useState<"login" | "register">("login")
+export function AuthModal({ isOpen, onClose, defaultTab = "login" }: AuthModalProps) {
+  const [activeTab, setActiveTab] = useState<"login" | "register">(defaultTab)
   const { login, loginDemo, register, isLoading } = useAuth()
   const router = useRouter()
 
@@ -41,6 +42,14 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
   // Estado para errores de validación
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // Resetear el tab cuando se abre el modal
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(defaultTab)
+      setErrors({})
+    }
+  }, [isOpen, defaultTab])
 
   // Manejar cambios en el formulario de inicio de sesión
   const handleLoginChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -155,8 +164,18 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
     const success = await register(registerData.name, registerData.email, registerData.password, registerData.role)
 
     if (success) {
-      onClose()
-      router.push("/bienvenida")
+      // No cerrar el modal inmediatamente para mostrar el mensaje de confirmación
+      toast({
+        title: "¡Registro exitoso!",
+        description: "Revisa tu email para confirmar tu cuenta antes de iniciar sesión.",
+        duration: 5000,
+      })
+
+      // Cambiar a la pestaña de login después de un momento
+      setTimeout(() => {
+        setActiveTab("login")
+        setLoginData({ email: registerData.email, password: "" })
+      }, 2000)
     }
   }
 
@@ -209,12 +228,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
           </div>
         </div>
 
-        <Tabs
-          defaultValue="login"
-          value={activeTab}
-          onValueChange={(value) => setActiveTab(value as "login" | "register")}
-          className="mt-4"
-        >
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "login" | "register")} className="mt-4">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="login">Iniciar Sesión</TabsTrigger>
             <TabsTrigger value="register">Registrarse</TabsTrigger>
@@ -232,6 +246,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                   value={loginData.email}
                   onChange={handleLoginChange}
                   className={errors.email ? "border-red-500" : ""}
+                  disabled={isLoading}
                 />
                 {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
               </div>
@@ -246,9 +261,17 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                   value={loginData.password}
                   onChange={handleLoginChange}
                   className={errors.password ? "border-red-500" : ""}
+                  disabled={isLoading}
                 />
                 {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
               </div>
+
+              {errors.general && (
+                <div className="flex items-center space-x-2 text-red-500 text-sm">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>{errors.general}</span>
+                </div>
+              )}
 
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? (
@@ -262,18 +285,22 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
               </Button>
 
               <div className="text-center text-sm">
-                <a href="#" className="text-blue-500 hover:underline">
-                  ¿Olvidaste tu contraseña?
-                </a>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("register")}
+                  className="text-blue-500 hover:underline"
+                >
+                  ¿No tienes cuenta? Regístrate aquí
+                </button>
               </div>
 
-              {/* Usuarios de prueba para desarrollo */}
+              {/* Información sobre Supabase */}
               <div className="border-t pt-4">
-                <p className="text-xs text-gray-500 mb-2">Usuarios de prueba:</p>
+                <p className="text-xs text-gray-500 mb-2">Conectado con Supabase:</p>
                 <div className="space-y-1 text-xs text-gray-400">
-                  <p>carlos@example.com / password123 (Creador)</p>
-                  <p>ana@example.com / password123 (Impresor)</p>
-                  <p>juan@example.com / password123 (Usuario)</p>
+                  <p>✅ Autenticación segura</p>
+                  <p>✅ Base de datos en tiempo real</p>
+                  <p>✅ Todos los usuarios empiezan con stats en 0</p>
                 </div>
               </div>
             </form>
@@ -290,6 +317,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                   value={registerData.name}
                   onChange={handleRegisterChange}
                   className={errors.name ? "border-red-500" : ""}
+                  disabled={isLoading}
                 />
                 {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
               </div>
@@ -304,6 +332,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                   value={registerData.email}
                   onChange={handleRegisterChange}
                   className={errors.email ? "border-red-500" : ""}
+                  disabled={isLoading}
                 />
                 {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
               </div>
@@ -318,6 +347,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                   value={registerData.password}
                   onChange={handleRegisterChange}
                   className={errors.password ? "border-red-500" : ""}
+                  disabled={isLoading}
                 />
                 {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
               </div>
@@ -332,6 +362,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                   value={registerData.confirmPassword}
                   onChange={handleRegisterChange}
                   className={errors.confirmPassword ? "border-red-500" : ""}
+                  disabled={isLoading}
                 />
                 {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword}</p>}
               </div>
@@ -344,6 +375,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                   onValueChange={(value) =>
                     setRegisterData({ ...registerData, role: value as "user" | "creator" | "printer" })
                   }
+                  disabled={isLoading}
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="user" id="user" />
@@ -367,9 +399,15 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     Creando cuenta...
                   </>
                 ) : (
-                  "Crear Cuenta y Explorar Mercado"
+                  "Crear Cuenta"
                 )}
               </Button>
+
+              <div className="text-center text-sm">
+                <button type="button" onClick={() => setActiveTab("login")} className="text-blue-500 hover:underline">
+                  ¿Ya tienes cuenta? Inicia sesión aquí
+                </button>
+              </div>
 
               <p className="text-center text-sm text-gray-500">
                 Al registrarte, aceptas nuestros{" "}

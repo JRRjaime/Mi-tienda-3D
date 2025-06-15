@@ -38,6 +38,7 @@ interface AuthContextType {
   user: User | null
   isLoading: boolean
   isAuthenticated: boolean
+  isSupabaseEnabled: boolean
   login: (email: string, password: string) => Promise<boolean>
   loginDemo: () => Promise<boolean>
   register: (name: string, email: string, password: string, role: "user" | "creator" | "printer") => Promise<boolean>
@@ -166,6 +167,99 @@ const generateRandomUser = () => {
   }
 }
 
+// USUARIOS MOCK PARA DESARROLLO (TODO EN 0)
+const MOCK_USERS = [
+  {
+    id: "1",
+    name: "Carlos Mendez",
+    email: "carlos@example.com",
+    password: "password123",
+    avatar: "/placeholder.svg?height=40&width=40",
+    role: "creator" as const,
+    createdAt: "2023-01-15T00:00:00Z",
+    profileConfigured: true,
+    interests: ["Tecnología", "Diseño", "Innovación", "Arte", "Modelado 3D", "Diseño Industrial"],
+    preferences: {
+      notifications: true,
+      newsletter: true,
+      publicProfile: true,
+    },
+    stats: {
+      balance: 0,
+      totalOrders: 0,
+      totalSales: 0,
+      rating: 0,
+      modelsUploaded: 0,
+      totalDownloads: 0,
+      totalEarnings: 0,
+      totalViews: 0,
+      totalReviews: 0,
+      totalLikes: 0,
+    },
+  },
+  {
+    id: "2",
+    name: "Ana López",
+    email: "ana@example.com",
+    password: "password123",
+    avatar: "/placeholder.svg?height=40&width=40",
+    role: "printer" as const,
+    createdAt: "2023-02-20T00:00:00Z",
+    profileConfigured: true,
+    interests: ["Tecnología", "Diseño", "Innovación", "Manufactura", "Materiales", "Ingeniería"],
+    preferences: {
+      notifications: true,
+      newsletter: false,
+      publicProfile: true,
+    },
+    stats: {
+      balance: 0,
+      totalOrders: 0,
+      totalSales: 0,
+      rating: 0,
+      modelsUploaded: 0,
+      totalDownloads: 0,
+      totalEarnings: 0,
+      totalViews: 0,
+      totalReviews: 0,
+      totalLikes: 0,
+    },
+  },
+  {
+    id: "3",
+    name: "Juan Pérez",
+    email: "juan@example.com",
+    password: "password123",
+    avatar: "/placeholder.svg?height=40&width=40",
+    role: "user" as const,
+    createdAt: "2023-03-10T00:00:00Z",
+    profileConfigured: true,
+    interests: ["Tecnología", "Diseño", "Innovación", "Hogar", "Gadgets", "Personalización"],
+    preferences: {
+      notifications: true,
+      newsletter: true,
+      publicProfile: false,
+    },
+    stats: {
+      balance: 0,
+      totalOrders: 0,
+      totalSales: 0,
+      rating: 0,
+      modelsUploaded: 0,
+      totalDownloads: 0,
+      totalEarnings: 0,
+      totalViews: 0,
+      totalReviews: 0,
+      totalLikes: 0,
+    },
+  },
+]
+
+// Función para verificar si Supabase está configurado
+const isSupabaseConfigured = () => {
+  return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+}
+
 // Crear el contexto
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
@@ -182,85 +276,204 @@ export const useAuth = () => {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [supabase, setSupabase] = useState<any>(null)
   const { toast } = useToast()
 
-  // Comprobar si hay un usuario en localStorage al cargar
+  const isSupabaseEnabled = isSupabaseConfigured()
+
+  // Inicializar Supabase solo si está configurado
   useEffect(() => {
-    const storedUser = localStorage.getItem("currentUser")
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser))
-      } catch (error) {
-        console.error("Error parsing stored user:", error)
-        localStorage.removeItem("currentUser")
+    const initSupabase = async () => {
+      if (isSupabaseEnabled) {
+        try {
+          const { createClientComponentClient } = await import("@supabase/auth-helpers-nextjs")
+          const supabaseClient = createClientComponentClient()
+          setSupabase(supabaseClient)
+        } catch (error) {
+          console.error("Error initializing Supabase:", error)
+        }
       }
     }
-    setIsLoading(false)
-  }, [])
 
-  // Función de inicio de sesión con base de datos real
+    initSupabase()
+  }, [isSupabaseEnabled])
+
+  // Comprobar si hay un usuario autenticado al cargar
+  useEffect(() => {
+    const getUser = async () => {
+      try {
+        if (isSupabaseEnabled && supabase) {
+          // Usar Supabase Auth
+          const {
+            data: { session },
+          } = await supabase.auth.getSession()
+
+          if (session?.user) {
+            // Obtener datos adicionales del usuario desde la tabla profiles
+            const { data: profile } = await supabase.from("profiles").select("*").eq("id", session.user.id).single()
+
+            if (profile) {
+              const userData: User = {
+                id: session.user.id,
+                name:
+                  profile.name || session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuario",
+                email: session.user.email || "",
+                avatar:
+                  profile.avatar || session.user.user_metadata?.avatar_url || `/placeholder.svg?height=40&width=40`,
+                role: profile.role || "user",
+                createdAt: session.user.created_at,
+                profileConfigured: profile.profile_configured || false,
+                interests: profile.interests || [],
+                preferences: {
+                  notifications: profile.preferences?.notifications ?? true,
+                  newsletter: profile.preferences?.newsletter ?? true,
+                  publicProfile: profile.preferences?.publicProfile ?? false,
+                },
+                stats: {
+                  balance: profile.stats?.balance || 0,
+                  totalOrders: profile.stats?.totalOrders || 0,
+                  totalSales: profile.stats?.totalSales || 0,
+                  rating: profile.stats?.rating || 0,
+                  modelsUploaded: profile.stats?.modelsUploaded || 0,
+                  totalDownloads: profile.stats?.totalDownloads || 0,
+                  totalEarnings: profile.stats?.totalEarnings || 0,
+                  totalViews: profile.stats?.totalViews || 0,
+                  totalReviews: profile.stats?.totalReviews || 0,
+                  totalLikes: profile.stats?.totalLikes || 0,
+                },
+              }
+              setUser(userData)
+            }
+          }
+        } else {
+          // Usar sistema mock - verificar localStorage
+          const storedUser = localStorage.getItem("currentUser")
+          if (storedUser) {
+            try {
+              setUser(JSON.parse(storedUser))
+            } catch (error) {
+              console.error("Error parsing stored user:", error)
+              localStorage.removeItem("currentUser")
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error getting user:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    getUser()
+
+    // Escuchar cambios en la autenticación solo si Supabase está habilitado
+    if (isSupabaseEnabled && supabase) {
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange(async (event: string, session: any) => {
+        if (event === "SIGNED_IN" && session?.user) {
+          // Usuario se ha autenticado
+          const { data: profile } = await supabase.from("profiles").select("*").eq("id", session.user.id).single()
+
+          if (profile) {
+            const userData: User = {
+              id: session.user.id,
+              name: profile.name || session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuario",
+              email: session.user.email || "",
+              avatar: profile.avatar || session.user.user_metadata?.avatar_url || `/placeholder.svg?height=40&width=40`,
+              role: profile.role || "user",
+              createdAt: session.user.created_at,
+              profileConfigured: profile.profile_configured || false,
+              interests: profile.interests || [],
+              preferences: {
+                notifications: profile.preferences?.notifications ?? true,
+                newsletter: profile.preferences?.newsletter ?? true,
+                publicProfile: profile.preferences?.publicProfile ?? false,
+              },
+              stats: {
+                balance: profile.stats?.balance || 0,
+                totalOrders: profile.stats?.totalOrders || 0,
+                totalSales: profile.stats?.totalSales || 0,
+                rating: profile.stats?.rating || 0,
+                modelsUploaded: profile.stats?.modelsUploaded || 0,
+                totalDownloads: profile.stats?.totalDownloads || 0,
+                totalEarnings: profile.stats?.totalEarnings || 0,
+                totalViews: profile.stats?.totalViews || 0,
+                totalReviews: profile.stats?.totalReviews || 0,
+                totalLikes: profile.stats?.totalLikes || 0,
+              },
+            }
+            setUser(userData)
+          }
+        } else if (event === "SIGNED_OUT") {
+          setUser(null)
+        }
+      })
+
+      return () => subscription.unsubscribe()
+    }
+  }, [isSupabaseEnabled, supabase])
+
+  // Función de inicio de sesión
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true)
 
     try {
-      // Llamada a tu API de autenticación
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      })
+      if (isSupabaseEnabled && supabase) {
+        // Usar Supabase Auth
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
 
-      if (response.ok) {
-        const userData = await response.json()
-
-        // Asegurar que el usuario tenga la estructura correcta
-        const userWithDefaults = {
-          ...userData,
-          profileConfigured: userData.profileConfigured ?? true,
-          interests: userData.interests ?? [],
-          preferences: {
-            notifications: userData.preferences?.notifications ?? true,
-            newsletter: userData.preferences?.newsletter ?? true,
-            publicProfile: userData.preferences?.publicProfile ?? false,
-            ...userData.preferences,
-          },
-          stats: {
-            balance: 0,
-            totalOrders: 0,
-            totalSales: 0,
-            rating: 0,
-            modelsUploaded: 0,
-            totalDownloads: 0,
-            totalEarnings: 0,
-            totalViews: 0,
-            totalReviews: 0,
-            totalLikes: 0,
-            ...userData.stats,
-          },
+        if (error) {
+          toast({
+            title: "Error de inicio de sesión",
+            description:
+              error.message === "Invalid login credentials" ? "Email o contraseña incorrectos" : error.message,
+            variant: "destructive",
+          })
+          setIsLoading(false)
+          return false
         }
 
-        setUser(userWithDefaults)
-        localStorage.setItem("currentUser", JSON.stringify(userWithDefaults))
-
-        toast({
-          title: "Sesión iniciada",
-          description: `Bienvenido de nuevo, ${userWithDefaults.name}`,
-        })
-
-        setIsLoading(false)
-        return true
+        if (data.user) {
+          toast({
+            title: "Sesión iniciada",
+            description: `Bienvenido de nuevo`,
+          })
+          setIsLoading(false)
+          return true
+        }
       } else {
-        const errorData = await response.json()
-        toast({
-          title: "Error de inicio de sesión",
-          description: errorData.message || "Email o contraseña incorrectos",
-          variant: "destructive",
-        })
-        setIsLoading(false)
-        return false
+        // Usar sistema mock
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+
+        const foundUser = MOCK_USERS.find((u) => u.email === email && u.password === password)
+
+        if (foundUser) {
+          const { password: _, ...userWithoutPassword } = foundUser
+          setUser(userWithoutPassword)
+          localStorage.setItem("currentUser", JSON.stringify(userWithoutPassword))
+          toast({
+            title: "Sesión iniciada",
+            description: `Bienvenido de nuevo, ${userWithoutPassword.name}`,
+          })
+          setIsLoading(false)
+          return true
+        } else {
+          toast({
+            title: "Error de inicio de sesión",
+            description: "Email o contraseña incorrectos",
+            variant: "destructive",
+          })
+          setIsLoading(false)
+          return false
+        }
       }
+
+      setIsLoading(false)
+      return false
     } catch (error) {
       console.error("Login error:", error)
       toast({
@@ -273,18 +486,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Función de inicio de sesión demo (funciona sin base de datos)
+  // Función de inicio de sesión demo
   const loginDemo = async (): Promise<boolean> => {
     setIsLoading(true)
 
     try {
-      // Simular una llamada a la API
       await new Promise((resolve) => setTimeout(resolve, 1500))
 
-      // Generar usuario aleatorio con todo en 0
       const demoUser = generateRandomUser()
-
-      // Omitir la contraseña del objeto de usuario
       const { password: _, ...userWithoutPassword } = demoUser
       setUser(userWithoutPassword)
       localStorage.setItem("currentUser", JSON.stringify(userWithoutPassword))
@@ -309,7 +518,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Función de registro con base de datos real
+  // Función de registro
   const register = async (
     name: string,
     email: string,
@@ -319,22 +528,86 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true)
 
     try {
-      // Llamada a tu API de registro
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name, email, password, role }),
-      })
+      if (isSupabaseEnabled && supabase) {
+        // Usar Supabase Auth
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name,
+              role,
+            },
+          },
+        })
 
-      if (response.ok) {
-        const userData = await response.json()
+        if (error) {
+          toast({
+            title: "Error de registro",
+            description: error.message === "User already registered" ? "Este email ya está en uso" : error.message,
+            variant: "destructive",
+          })
+          setIsLoading(false)
+          return false
+        }
 
-        // Asegurar que el usuario tenga la estructura correcta con stats en 0
+        if (data.user) {
+          const profileData = generateCleanProfile(role)
+
+          const { error: profileError } = await supabase.from("profiles").insert({
+            id: data.user.id,
+            name,
+            email,
+            role,
+            profile_configured: true,
+            interests: profileData.interests,
+            preferences: {
+              notifications: true,
+              newsletter: role !== "printer",
+              publicProfile: role !== "user",
+            },
+            stats: profileData.stats,
+          })
+
+          if (profileError) {
+            console.error("Error creating profile:", profileError)
+          }
+
+          toast({
+            title: "Registro exitoso",
+            description: `¡Bienvenido ${name}! Revisa tu email para confirmar tu cuenta.`,
+          })
+
+          setIsLoading(false)
+          return true
+        }
+      } else {
+        // Usar sistema mock
+        await new Promise((resolve) => setTimeout(resolve, 1500))
+
+        if (MOCK_USERS.some((u) => u.email === email)) {
+          toast({
+            title: "Error de registro",
+            description: "Este email ya está en uso",
+            variant: "destructive",
+          })
+          setIsLoading(false)
+          return false
+        }
+
         const profileData = generateCleanProfile(role)
-        const userWithDefaults = {
-          ...userData,
+
+        const newUser = {
+          id: `${Date.now()}`,
+          name,
+          email,
+          password,
+          avatar: `/placeholder.svg?height=40&width=40&query=${name
+            .split(" ")
+            .map((n) => n[0])
+            .join("")}`,
+          role,
+          createdAt: new Date().toISOString(),
           profileConfigured: true,
           interests: profileData.interests,
           preferences: {
@@ -342,11 +615,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             newsletter: role !== "printer",
             publicProfile: role !== "user",
           },
-          stats: profileData.stats, // Todo en 0
+          stats: profileData.stats,
         }
 
-        setUser(userWithDefaults)
-        localStorage.setItem("currentUser", JSON.stringify(userWithDefaults))
+        const { password: _, ...userWithoutPassword } = newUser
+        setUser(userWithoutPassword)
+        localStorage.setItem("currentUser", JSON.stringify(userWithoutPassword))
 
         toast({
           title: "Registro exitoso",
@@ -355,16 +629,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         setIsLoading(false)
         return true
-      } else {
-        const errorData = await response.json()
-        toast({
-          title: "Error de registro",
-          description: errorData.message || "No se pudo crear la cuenta",
-          variant: "destructive",
-        })
-        setIsLoading(false)
-        return false
       }
+
+      setIsLoading(false)
+      return false
     } catch (error) {
       console.error("Register error:", error)
       toast({
@@ -380,62 +648,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Función de cierre de sesión
   const logout = async () => {
     try {
-      // Llamar a tu API de logout si existe
-      await fetch("/api/auth/logout", {
-        method: "POST",
+      if (isSupabaseEnabled && supabase) {
+        await supabase.auth.signOut()
+      } else {
+        localStorage.removeItem("currentUser")
+      }
+      setUser(null)
+      toast({
+        title: "Sesión cerrada",
+        description: "Has cerrado sesión correctamente",
       })
     } catch (error) {
       console.error("Logout error:", error)
     }
-
-    setUser(null)
-    localStorage.removeItem("currentUser")
-    toast({
-      title: "Sesión cerrada",
-      description: "Has cerrado sesión correctamente",
-    })
   }
 
   const updateUserPhoto = async (photoUrl: string): Promise<void> => {
     if (!user) return
 
-    const updatedUser = { ...user, avatar: photoUrl }
-    setUser(updatedUser)
-    localStorage.setItem("currentUser", JSON.stringify(updatedUser))
-
-    // Opcional: actualizar en la base de datos
     try {
-      await fetch("/api/user/update-photo", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ photoUrl }),
-      })
+      if (isSupabaseEnabled && supabase) {
+        const { error } = await supabase.from("profiles").update({ avatar: photoUrl }).eq("id", user.id)
+
+        if (!error) {
+          const updatedUser = { ...user, avatar: photoUrl }
+          setUser(updatedUser)
+        }
+      } else {
+        const updatedUser = { ...user, avatar: photoUrl }
+        setUser(updatedUser)
+        localStorage.setItem("currentUser", JSON.stringify(updatedUser))
+      }
     } catch (error) {
       console.error("Update photo error:", error)
     }
   }
 
-  const updateUserStats = (newStats: Partial<User["stats"]>) => {
+  const updateUserStats = async (newStats: Partial<User["stats"]>) => {
     if (!user) return
 
-    const updatedUser = {
-      ...user,
-      stats: { ...user.stats, ...newStats },
-    }
-    setUser(updatedUser)
-    localStorage.setItem("currentUser", JSON.stringify(updatedUser))
-
-    // Opcional: actualizar en la base de datos
     try {
-      fetch("/api/user/update-stats", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ stats: newStats }),
-      })
+      const updatedStats = { ...user.stats, ...newStats }
+
+      if (isSupabaseEnabled && supabase) {
+        const { error } = await supabase.from("profiles").update({ stats: updatedStats }).eq("id", user.id)
+
+        if (!error) {
+          const updatedUser = {
+            ...user,
+            stats: updatedStats,
+          }
+          setUser(updatedUser)
+        }
+      } else {
+        const updatedUser = {
+          ...user,
+          stats: updatedStats,
+        }
+        setUser(updatedUser)
+        localStorage.setItem("currentUser", JSON.stringify(updatedUser))
+      }
     } catch (error) {
       console.error("Update stats error:", error)
     }
@@ -447,6 +719,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isLoading,
         isAuthenticated: !!user,
+        isSupabaseEnabled,
         login,
         loginDemo,
         register,
