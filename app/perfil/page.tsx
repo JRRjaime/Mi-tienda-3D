@@ -173,16 +173,8 @@ export default function ProfilePage() {
 
   // Simular balance basado en el tipo de usuario
   const getBalance = () => {
-    switch (user.role) {
-      case "creator":
-        return 1250.5
-      case "printer":
-        return 890.25
-      case "user":
-        return 45.0
-      default:
-        return 0
-    }
+    // Todos los usuarios empiezan con balance en 0
+    return 0
   }
 
   return (
