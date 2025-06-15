@@ -135,10 +135,6 @@ const APELLIDOS = [
   "Martín",
   "Jiménez",
   "Ruiz",
-  "Hernández",
-  "Díaz",
-  "Moreno",
-  "Muñoz",
 ]
 
 // Función para generar usuario aleatorio (TODO EN 0)
@@ -169,94 +165,6 @@ const generateRandomUser = () => {
     stats: profileData.stats,
   }
 }
-
-// TODOS LOS USUARIOS EMPIEZAN EN 0 - Sin excepciones
-const MOCK_USERS = [
-  {
-    id: "1",
-    name: "Carlos Mendez",
-    email: "carlos@example.com",
-    password: "password123",
-    avatar: "/placeholder.svg?height=40&width=40",
-    role: "creator" as const,
-    createdAt: "2023-01-15T00:00:00Z",
-    profileConfigured: true,
-    interests: ["Tecnología", "Diseño", "Innovación", "Arte", "Modelado 3D", "Diseño Industrial"],
-    preferences: {
-      notifications: true,
-      newsletter: true,
-      publicProfile: true,
-    },
-    stats: {
-      balance: 0,
-      totalOrders: 0,
-      totalSales: 0,
-      rating: 0,
-      modelsUploaded: 0,
-      totalDownloads: 0,
-      totalEarnings: 0,
-      totalViews: 0,
-      totalReviews: 0,
-      totalLikes: 0,
-    },
-  },
-  {
-    id: "2",
-    name: "Ana López",
-    email: "ana@example.com",
-    password: "password123",
-    avatar: "/placeholder.svg?height=40&width=40",
-    role: "printer" as const,
-    createdAt: "2023-02-20T00:00:00Z",
-    profileConfigured: true,
-    interests: ["Tecnología", "Diseño", "Innovación", "Manufactura", "Materiales", "Ingeniería"],
-    preferences: {
-      notifications: true,
-      newsletter: false,
-      publicProfile: true,
-    },
-    stats: {
-      balance: 0,
-      totalOrders: 0,
-      totalSales: 0,
-      rating: 0,
-      modelsUploaded: 0,
-      totalDownloads: 0,
-      totalEarnings: 0,
-      totalViews: 0,
-      totalReviews: 0,
-      totalLikes: 0,
-    },
-  },
-  {
-    id: "3",
-    name: "Juan Pérez",
-    email: "juan@example.com",
-    password: "password123",
-    avatar: "/placeholder.svg?height=40&width=40",
-    role: "user" as const,
-    createdAt: "2023-03-10T00:00:00Z",
-    profileConfigured: true,
-    interests: ["Tecnología", "Diseño", "Innovación", "Hogar", "Gadgets", "Personalización"],
-    preferences: {
-      notifications: true,
-      newsletter: true,
-      publicProfile: false,
-    },
-    stats: {
-      balance: 0,
-      totalOrders: 0,
-      totalSales: 0,
-      rating: 0,
-      modelsUploaded: 0,
-      totalDownloads: 0,
-      totalEarnings: 0,
-      totalViews: 0,
-      totalReviews: 0,
-      totalLikes: 0,
-    },
-  },
-]
 
 // Crear el contexto
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -290,30 +198,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false)
   }, [])
 
-  // Función de inicio de sesión
+  // Función de inicio de sesión con base de datos real
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true)
 
-    // Simular una llamada a la API
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    const foundUser = MOCK_USERS.find((u) => u.email === email && u.password === password)
-
-    if (foundUser) {
-      // Omitir la contraseña del objeto de usuario
-      const { password: _, ...userWithoutPassword } = foundUser
-      setUser(userWithoutPassword)
-      localStorage.setItem("currentUser", JSON.stringify(userWithoutPassword))
-      toast({
-        title: "Sesión iniciada",
-        description: `Bienvenido de nuevo, ${userWithoutPassword.name}`,
+    try {
+      // Llamada a tu API de autenticación
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
       })
-      setIsLoading(false)
-      return true
-    } else {
+
+      if (response.ok) {
+        const userData = await response.json()
+
+        // Asegurar que el usuario tenga la estructura correcta
+        const userWithDefaults = {
+          ...userData,
+          profileConfigured: userData.profileConfigured ?? true,
+          interests: userData.interests ?? [],
+          preferences: {
+            notifications: userData.preferences?.notifications ?? true,
+            newsletter: userData.preferences?.newsletter ?? true,
+            publicProfile: userData.preferences?.publicProfile ?? false,
+            ...userData.preferences,
+          },
+          stats: {
+            balance: 0,
+            totalOrders: 0,
+            totalSales: 0,
+            rating: 0,
+            modelsUploaded: 0,
+            totalDownloads: 0,
+            totalEarnings: 0,
+            totalViews: 0,
+            totalReviews: 0,
+            totalLikes: 0,
+            ...userData.stats,
+          },
+        }
+
+        setUser(userWithDefaults)
+        localStorage.setItem("currentUser", JSON.stringify(userWithDefaults))
+
+        toast({
+          title: "Sesión iniciada",
+          description: `Bienvenido de nuevo, ${userWithDefaults.name}`,
+        })
+
+        setIsLoading(false)
+        return true
+      } else {
+        const errorData = await response.json()
+        toast({
+          title: "Error de inicio de sesión",
+          description: errorData.message || "Email o contraseña incorrectos",
+          variant: "destructive",
+        })
+        setIsLoading(false)
+        return false
+      }
+    } catch (error) {
+      console.error("Login error:", error)
       toast({
-        title: "Error de inicio de sesión",
-        description: "Email o contraseña incorrectos",
+        title: "Error de conexión",
+        description: "No se pudo conectar con el servidor. Intenta de nuevo.",
         variant: "destructive",
       })
       setIsLoading(false)
@@ -321,39 +273,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Función de inicio de sesión demo (TODO EN 0)
+  // Función de inicio de sesión demo (funciona sin base de datos)
   const loginDemo = async (): Promise<boolean> => {
     setIsLoading(true)
 
-    // Simular una llamada a la API
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      // Simular una llamada a la API
+      await new Promise((resolve) => setTimeout(resolve, 1500))
 
-    // Generar usuario aleatorio con todo en 0
-    const demoUser = generateRandomUser()
+      // Generar usuario aleatorio con todo en 0
+      const demoUser = generateRandomUser()
 
-    // Omitir la contraseña del objeto de usuario
-    const { password: _, ...userWithoutPassword } = demoUser
-    setUser(userWithoutPassword)
-    localStorage.setItem("currentUser", JSON.stringify(userWithoutPassword))
+      // Omitir la contraseña del objeto de usuario
+      const { password: _, ...userWithoutPassword } = demoUser
+      setUser(userWithoutPassword)
+      localStorage.setItem("currentUser", JSON.stringify(userWithoutPassword))
 
-    // Mensaje personalizado según el rol
-    const roleMessages = {
-      creator: `¡Bienvenido ${userWithoutPassword.name}! Eres un creador. Sube tu primer modelo para empezar a ganar.`,
-      printer: `¡Bienvenido ${userWithoutPassword.name}! Eres un impresor. Configura tu perfil para recibir pedidos.`,
-      user: `¡Bienvenido ${userWithoutPassword.name}! Explora y compra modelos 3D increíbles.`,
+      toast({
+        title: "¡Cuenta demo creada!",
+        description: `¡Bienvenido ${userWithoutPassword.name}! Redirigiendo...`,
+        duration: 3000,
+      })
+
+      setIsLoading(false)
+      return true
+    } catch (error) {
+      console.error("Demo login error:", error)
+      toast({
+        title: "Error",
+        description: "No se pudo crear la cuenta demo. Intenta de nuevo.",
+        variant: "destructive",
+      })
+      setIsLoading(false)
+      return false
     }
-
-    toast({
-      title: "¡Cuenta demo creada!",
-      description: `¡Bienvenido ${userWithoutPassword.name}! Redirigiendo...`,
-      duration: 3000,
-    })
-
-    setIsLoading(false)
-    return true
   }
 
-  // Función de registro (TODO EN 0)
+  // Función de registro con base de datos real
   const register = async (
     name: string,
     email: string,
@@ -362,68 +318,76 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   ): Promise<boolean> => {
     setIsLoading(true)
 
-    // Simular una llamada a la API
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      // Llamada a tu API de registro
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name, email, password, role }),
+      })
 
-    // Comprobar si el email ya está en uso
-    if (MOCK_USERS.some((u) => u.email === email)) {
+      if (response.ok) {
+        const userData = await response.json()
+
+        // Asegurar que el usuario tenga la estructura correcta con stats en 0
+        const profileData = generateCleanProfile(role)
+        const userWithDefaults = {
+          ...userData,
+          profileConfigured: true,
+          interests: profileData.interests,
+          preferences: {
+            notifications: true,
+            newsletter: role !== "printer",
+            publicProfile: role !== "user",
+          },
+          stats: profileData.stats, // Todo en 0
+        }
+
+        setUser(userWithDefaults)
+        localStorage.setItem("currentUser", JSON.stringify(userWithDefaults))
+
+        toast({
+          title: "Registro exitoso",
+          description: `¡Bienvenido ${name}! Configurando tu experiencia...`,
+        })
+
+        setIsLoading(false)
+        return true
+      } else {
+        const errorData = await response.json()
+        toast({
+          title: "Error de registro",
+          description: errorData.message || "No se pudo crear la cuenta",
+          variant: "destructive",
+        })
+        setIsLoading(false)
+        return false
+      }
+    } catch (error) {
+      console.error("Register error:", error)
       toast({
-        title: "Error de registro",
-        description: "Este email ya está en uso",
+        title: "Error de conexión",
+        description: "No se pudo conectar con el servidor. Intenta de nuevo.",
         variant: "destructive",
       })
       setIsLoading(false)
       return false
     }
-
-    // Generar datos del perfil según el rol (TODO EN 0)
-    const profileData = generateCleanProfile(role)
-
-    // Crear nuevo usuario con perfil preconfigurado
-    const newUser = {
-      id: `${Date.now()}`,
-      name,
-      email,
-      password,
-      avatar: `/placeholder.svg?height=40&width=40&query=${name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")}`,
-      role,
-      createdAt: new Date().toISOString(),
-      profileConfigured: true,
-      interests: profileData.interests,
-      preferences: {
-        notifications: true,
-        newsletter: role !== "printer",
-        publicProfile: role !== "user",
-      },
-      stats: profileData.stats,
-    }
-
-    // Iniciar sesión con el nuevo usuario
-    const { password: _, ...userWithoutPassword } = newUser
-    setUser(userWithoutPassword)
-    localStorage.setItem("currentUser", JSON.stringify(userWithoutPassword))
-
-    // Mensaje personalizado según el rol
-    const roleMessages = {
-      creator: "¡Bienvenido! Sube tu primer modelo para empezar a ganar dinero.",
-      printer: "¡Bienvenido! Configura tu perfil para empezar a recibir pedidos.",
-      user: "¡Bienvenido! Explora nuestro mercado de modelos 3D.",
-    }
-
-    toast({
-      title: "Registro exitoso",
-      description: `¡Bienvenido ${name}! Configurando tu experiencia...`,
-    })
-
-    setIsLoading(false)
-    return true
   }
 
   // Función de cierre de sesión
-  const logout = () => {
+  const logout = async () => {
+    try {
+      // Llamar a tu API de logout si existe
+      await fetch("/api/auth/logout", {
+        method: "POST",
+      })
+    } catch (error) {
+      console.error("Logout error:", error)
+    }
+
     setUser(null)
     localStorage.removeItem("currentUser")
     toast({
@@ -438,6 +402,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const updatedUser = { ...user, avatar: photoUrl }
     setUser(updatedUser)
     localStorage.setItem("currentUser", JSON.stringify(updatedUser))
+
+    // Opcional: actualizar en la base de datos
+    try {
+      await fetch("/api/user/update-photo", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ photoUrl }),
+      })
+    } catch (error) {
+      console.error("Update photo error:", error)
+    }
   }
 
   const updateUserStats = (newStats: Partial<User["stats"]>) => {
@@ -449,6 +426,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setUser(updatedUser)
     localStorage.setItem("currentUser", JSON.stringify(updatedUser))
+
+    // Opcional: actualizar en la base de datos
+    try {
+      fetch("/api/user/update-stats", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ stats: newStats }),
+      })
+    } catch (error) {
+      console.error("Update stats error:", error)
+    }
   }
 
   return (

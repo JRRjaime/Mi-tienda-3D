@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/contexts/auth-context"
 import { Loader2, Zap } from "lucide-react"
+import { toast } from "@/components/ui/use-toast"
 
 interface AuthModalProps {
   isOpen: boolean
@@ -67,11 +68,19 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
   // Manejar inicio de sesión demo
   const handleDemoLogin = async () => {
-    const success = await loginDemo()
-    if (success) {
-      onClose()
-      // Usar router.push en lugar de window.location.href
-      router.push("/bienvenida")
+    try {
+      const success = await loginDemo()
+      if (success) {
+        onClose()
+        router.push("/bienvenida")
+      }
+    } catch (error) {
+      console.error("Demo login failed:", error)
+      toast({
+        title: "Error",
+        description: "No se pudo crear la cuenta demo. Intenta de nuevo.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -96,11 +105,16 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
       return
     }
 
-    // Intentar iniciar sesión
-    const success = await login(loginData.email, loginData.password)
-    if (success) {
-      onClose()
-      router.push("/bienvenida")
+    try {
+      // Intentar iniciar sesión
+      const success = await login(loginData.email, loginData.password)
+      if (success) {
+        onClose()
+        router.push("/bienvenida")
+      }
+    } catch (error) {
+      console.error("Login failed:", error)
+      setErrors({ general: "Error de conexión. Intenta de nuevo." })
     }
   }
 
