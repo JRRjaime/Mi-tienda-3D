@@ -255,13 +255,24 @@ const MOCK_USERS = [
   },
 ]
 
-// Función para verificar si Supabase está configurado
+// Función mejorada para verificar si Supabase está configurado correctamente
 const isSupabaseConfigured = () => {
-  return !!(
-    typeof window !== "undefined" &&
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  )
+  if (typeof window === "undefined") return false
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  // Verificar que las variables existan y tengan el formato correcto
+  const isValidUrl = url && url.startsWith("https://") && url.includes(".supabase.co")
+  const isValidKey = key && key.length > 50 // Las claves de Supabase son largas
+
+  console.log("🔍 Supabase Configuration Check:")
+  console.log("  URL:", url ? "✅ Present" : "❌ Missing")
+  console.log("  Key:", key ? "✅ Present" : "❌ Missing")
+  console.log("  Valid URL:", isValidUrl ? "✅ Valid" : "❌ Invalid")
+  console.log("  Valid Key:", isValidKey ? "✅ Valid" : "❌ Invalid")
+
+  return !!(isValidUrl && isValidKey)
 }
 
 // Crear el contexto
@@ -285,20 +296,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isSupabaseEnabled = isSupabaseConfigured()
 
-  // Inicializar Supabase solo si está configurado
+  // Inicializar Supabase solo si está configurado correctamente
   useEffect(() => {
     const initSupabase = async () => {
       if (isSupabaseEnabled) {
         try {
+          console.log("🚀 Initializing Supabase...")
           const { createClientComponentClient } = await import("@supabase/auth-helpers-nextjs")
           const supabaseClient = createClientComponentClient()
+
+          // Probar la conexión con una llamada simple
+          const { data, error } = await supabaseClient.auth.getSession()
+
+          if (error && error.message.includes("Invalid API key")) {
+            console.error("❌ Invalid Supabase API key, falling back to demo mode")
+            setSupabase(null)
+            return
+          }
+
           setSupabase(supabaseClient)
           console.log("✅ Supabase initialized successfully")
         } catch (error) {
           console.warn("⚠️ Supabase initialization failed, falling back to demo mode:", error)
+          setSupabase(null)
         }
       } else {
-        console.log("🧪 Running in demo mode - Supabase not configured")
+        console.log("🧪 Running in demo mode - Supabase not properly configured")
+        setSupabase(null)
       }
     }
 
@@ -310,6 +334,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const getUser = async () => {
       try {
         if (isSupabaseEnabled && supabase) {
+          console.log("🔍 Checking for existing Supabase session...")
           // Usar Supabase Auth
           try {
             const {
@@ -318,12 +343,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             } = await supabase.auth.getSession()
 
             if (sessionError) {
-              console.warn("Session error:", sessionError)
+              console.warn("⚠️ Session error:", sessionError.message)
+              // Si hay error de API key, desactivar Supabase
+              if (sessionError.message.includes("Invalid API key")) {
+                setSupabase(null)
+                console.log("🧪 Switching to demo mode due to invalid API key")
+              }
               setIsLoading(false)
               return
             }
 
             if (session?.user) {
+              console.log("✅ Found existing Supabase session")
               // Obtener datos adicionales del usuario desde la tabla profiles
               const { data: profile, error: profileError } = await supabase
                 .from("profiles")
@@ -332,7 +363,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 .single()
 
               if (profileError) {
-                console.warn("Profile error:", profileError)
+                console.warn("⚠️ Profile error:", profileError.message)
                 // Crear perfil básico si no existe
                 const basicProfile = {
                   id: session.user.id,
@@ -394,34 +425,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
                 setUser(userData)
               }
+            } else {
+              console.log("ℹ️ No existing Supabase session found")
             }
-          } catch (supabaseError) {
-            console.warn("Supabase error, falling back to localStorage:", supabaseError)
+          } catch (supabaseError: any) {
+            console.warn("⚠️ Supabase error, falling back to localStorage:", supabaseError.message)
+            // Si hay error de API key, desactivar Supabase
+            if (supabaseError.message?.includes("Invalid API key")) {
+              setSupabase(null)
+              console.log("🧪 Switching to demo mode due to API error")
+            }
             // Fallback a localStorage si Supabase falla
             const storedUser = localStorage.getItem("currentUser")
             if (storedUser) {
               try {
                 setUser(JSON.parse(storedUser))
+                console.log("✅ Loaded user from localStorage")
               } catch (error) {
-                console.error("Error parsing stored user:", error)
+                console.error("❌ Error parsing stored user:", error)
                 localStorage.removeItem("currentUser")
               }
             }
           }
         } else {
+          console.log("🧪 Using demo mode - checking localStorage...")
           // Usar sistema mock - verificar localStorage
           const storedUser = localStorage.getItem("currentUser")
           if (storedUser) {
             try {
               setUser(JSON.parse(storedUser))
+              console.log("✅ Loaded demo user from localStorage")
             } catch (error) {
-              console.error("Error parsing stored user:", error)
+              console.error("❌ Error parsing stored user:", error)
               localStorage.removeItem("currentUser")
             }
+          } else {
+            console.log("ℹ️ No stored user found")
           }
         }
       } catch (error) {
-        console.error("Error getting user:", error)
+        console.error("❌ Error getting user:", error)
       } finally {
         setIsLoading(false)
       }
@@ -429,15 +472,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     getUser()
 
-    // Escuchar cambios en la autenticación solo si Supabase está habilitado
+    // Escuchar cambios en la autenticación solo si Supabase está habilitado y funcionando
     if (isSupabaseEnabled && supabase) {
       try {
+        console.log("👂 Setting up Supabase auth listener...")
         const {
           data: { subscription },
         } = supabase.auth.onAuthStateChange(async (event: string, session: any) => {
-          console.log("Auth state changed:", event)
+          console.log("🔄 Auth state changed:", event)
 
           if (event === "SIGNED_IN" && session?.user) {
+            console.log("✅ User signed in via Supabase")
             // Usuario se ha autenticado
             try {
               const { data: profile } = await supabase.from("profiles").select("*").eq("id", session.user.id).single()
@@ -475,16 +520,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setUser(userData)
               }
             } catch (error) {
-              console.warn("Error loading profile after sign in:", error)
+              console.warn("⚠️ Error loading profile after sign in:", error)
             }
           } else if (event === "SIGNED_OUT") {
+            console.log("👋 User signed out")
             setUser(null)
           }
         })
 
-        return () => subscription.unsubscribe()
+        return () => {
+          console.log("🔇 Cleaning up auth listener")
+          subscription.unsubscribe()
+        }
       } catch (error) {
-        console.warn("Error setting up auth listener:", error)
+        console.warn("⚠️ Error setting up auth listener:", error)
       }
     }
   }, [isSupabaseEnabled, supabase])
@@ -495,6 +544,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       if (isSupabaseEnabled && supabase) {
+        console.log("🔐 Attempting Supabase login...")
         // Usar Supabase Auth
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
@@ -502,7 +552,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
 
         if (error) {
-          console.error("Supabase login error:", error)
+          console.error("❌ Supabase login error:", error.message)
+
+          // Si hay error de API key, cambiar a modo demo
+          if (error.message.includes("Invalid API key")) {
+            setSupabase(null)
+            console.log("🧪 Switching to demo mode due to login API error")
+            // Intentar login en modo demo
+            return await loginWithMockData(email, password)
+          }
+
           toast({
             title: "Error de inicio de sesión",
             description:
@@ -514,6 +573,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (data.user) {
+          console.log("✅ Supabase login successful")
           toast({
             title: "Sesión iniciada",
             description: `Bienvenido de nuevo`,
@@ -522,36 +582,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return true
         }
       } else {
-        // Usar sistema mock
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-
-        const foundUser = MOCK_USERS.find((u) => u.email === email && u.password === password)
-
-        if (foundUser) {
-          const { password: _, ...userWithoutPassword } = foundUser
-          setUser(userWithoutPassword)
-          localStorage.setItem("currentUser", JSON.stringify(userWithoutPassword))
-          toast({
-            title: "Sesión iniciada",
-            description: `Bienvenido de nuevo, ${userWithoutPassword.name}`,
-          })
-          setIsLoading(false)
-          return true
-        } else {
-          toast({
-            title: "Error de inicio de sesión",
-            description: "Email o contraseña incorrectos",
-            variant: "destructive",
-          })
-          setIsLoading(false)
-          return false
-        }
+        console.log("🧪 Using demo login...")
+        return await loginWithMockData(email, password)
       }
 
       setIsLoading(false)
       return false
-    } catch (error) {
-      console.error("Login error:", error)
+    } catch (error: any) {
+      console.error("❌ Login error:", error.message)
+
+      // Si hay error de API key, cambiar a modo demo
+      if (error.message?.includes("Invalid API key")) {
+        setSupabase(null)
+        console.log("🧪 Switching to demo mode due to catch API error")
+        return await loginWithMockData(email, password)
+      }
+
       toast({
         title: "Error de conexión",
         description: "No se pudo conectar con el servidor. Intenta de nuevo.",
@@ -562,9 +608,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // Función auxiliar para login con datos mock
+  const loginWithMockData = async (email: string, password: string): Promise<boolean> => {
+    console.log("🧪 Attempting demo login...")
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+
+    const foundUser = MOCK_USERS.find((u) => u.email === email && u.password === password)
+
+    if (foundUser) {
+      const { password: _, ...userWithoutPassword } = foundUser
+      setUser(userWithoutPassword)
+      localStorage.setItem("currentUser", JSON.stringify(userWithoutPassword))
+      toast({
+        title: "Sesión iniciada",
+        description: `Bienvenido de nuevo, ${userWithoutPassword.name}`,
+      })
+      console.log("✅ Demo login successful")
+      setIsLoading(false)
+      return true
+    } else {
+      toast({
+        title: "Error de inicio de sesión",
+        description: "Email o contraseña incorrectos",
+        variant: "destructive",
+      })
+      console.log("❌ Demo login failed - invalid credentials")
+      setIsLoading(false)
+      return false
+    }
+  }
+
   // Función de inicio de sesión demo
   const loginDemo = async (): Promise<boolean> => {
     setIsLoading(true)
+    console.log("🎭 Creating demo user...")
 
     try {
       await new Promise((resolve) => setTimeout(resolve, 1500))
@@ -580,10 +657,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         duration: 3000,
       })
 
+      console.log("✅ Demo user created successfully")
       setIsLoading(false)
       return true
     } catch (error) {
-      console.error("Demo login error:", error)
+      console.error("❌ Demo login error:", error)
       toast({
         title: "Error",
         description: "No se pudo crear la cuenta demo. Intenta de nuevo.",
@@ -605,6 +683,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       if (isSupabaseEnabled && supabase) {
+        console.log("📝 Attempting Supabase registration...")
         // Usar Supabase Auth
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -618,7 +697,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
 
         if (error) {
-          console.error("Supabase register error:", error)
+          console.error("❌ Supabase register error:", error.message)
+
+          // Si hay error de API key, cambiar a modo demo
+          if (error.message.includes("Invalid API key")) {
+            setSupabase(null)
+            console.log("🧪 Switching to demo mode due to register API error")
+            return await registerWithMockData(name, email, password, role)
+          }
+
           toast({
             title: "Error de registro",
             description: error.message === "User already registered" ? "Este email ya está en uso" : error.message,
@@ -629,6 +716,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (data.user) {
+          console.log("✅ Supabase registration successful")
           const profileData = generateCleanProfile(role)
 
           try {
@@ -648,10 +736,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             })
 
             if (profileError) {
-              console.warn("Error creating profile:", profileError)
+              console.warn("⚠️ Error creating profile:", profileError.message)
+            } else {
+              console.log("✅ Profile created successfully")
             }
           } catch (profileError) {
-            console.warn("Profile creation failed:", profileError)
+            console.warn("⚠️ Profile creation failed:", profileError)
           }
 
           toast({
@@ -663,59 +753,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return true
         }
       } else {
-        // Usar sistema mock
-        await new Promise((resolve) => setTimeout(resolve, 1500))
-
-        if (MOCK_USERS.some((u) => u.email === email)) {
-          toast({
-            title: "Error de registro",
-            description: "Este email ya está en uso",
-            variant: "destructive",
-          })
-          setIsLoading(false)
-          return false
-        }
-
-        const profileData = generateCleanProfile(role)
-
-        const newUser = {
-          id: `${Date.now()}`,
-          name,
-          email,
-          password,
-          avatar: `/placeholder.svg?height=40&width=40&query=${name
-            .split(" ")
-            .map((n) => n[0])
-            .join("")}`,
-          role,
-          createdAt: new Date().toISOString(),
-          profileConfigured: true,
-          interests: profileData.interests,
-          preferences: {
-            notifications: true,
-            newsletter: role !== "printer",
-            publicProfile: role !== "user",
-          },
-          stats: profileData.stats,
-        }
-
-        const { password: _, ...userWithoutPassword } = newUser
-        setUser(userWithoutPassword)
-        localStorage.setItem("currentUser", JSON.stringify(userWithoutPassword))
-
-        toast({
-          title: "Registro exitoso",
-          description: `¡Bienvenido ${name}! Configurando tu experiencia...`,
-        })
-
-        setIsLoading(false)
-        return true
+        console.log("🧪 Using demo registration...")
+        return await registerWithMockData(name, email, password, role)
       }
 
       setIsLoading(false)
       return false
-    } catch (error) {
-      console.error("Register error:", error)
+    } catch (error: any) {
+      console.error("❌ Register error:", error.message)
+
+      // Si hay error de API key, cambiar a modo demo
+      if (error.message?.includes("Invalid API key")) {
+        setSupabase(null)
+        console.log("🧪 Switching to demo mode due to catch register API error")
+        return await registerWithMockData(name, email, password, role)
+      }
+
       toast({
         title: "Error de conexión",
         description: "No se pudo conectar con el servidor. Intenta de nuevo.",
@@ -726,12 +779,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // Función auxiliar para registro con datos mock
+  const registerWithMockData = async (
+    name: string,
+    email: string,
+    password: string,
+    role: "user" | "creator" | "printer",
+  ): Promise<boolean> => {
+    console.log("🧪 Attempting demo registration...")
+    await new Promise((resolve) => setTimeout(resolve, 1500))
+
+    if (MOCK_USERS.some((u) => u.email === email)) {
+      toast({
+        title: "Error de registro",
+        description: "Este email ya está en uso",
+        variant: "destructive",
+      })
+      console.log("❌ Demo registration failed - email exists")
+      setIsLoading(false)
+      return false
+    }
+
+    const profileData = generateCleanProfile(role)
+
+    const newUser = {
+      id: `${Date.now()}`,
+      name,
+      email,
+      password,
+      avatar: `/placeholder.svg?height=40&width=40&query=${name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")}`,
+      role,
+      createdAt: new Date().toISOString(),
+      profileConfigured: true,
+      interests: profileData.interests,
+      preferences: {
+        notifications: true,
+        newsletter: role !== "printer",
+        publicProfile: role !== "user",
+      },
+      stats: profileData.stats,
+    }
+
+    const { password: _, ...userWithoutPassword } = newUser
+    setUser(userWithoutPassword)
+    localStorage.setItem("currentUser", JSON.stringify(userWithoutPassword))
+
+    toast({
+      title: "Registro exitoso",
+      description: `¡Bienvenido ${name}! Configurando tu experiencia...`,
+    })
+
+    console.log("✅ Demo registration successful")
+    setIsLoading(false)
+    return true
+  }
+
   // Función de cierre de sesión
   const logout = async () => {
     try {
       if (isSupabaseEnabled && supabase) {
+        console.log("👋 Logging out from Supabase...")
         await supabase.auth.signOut()
       } else {
+        console.log("👋 Logging out from demo mode...")
         localStorage.removeItem("currentUser")
       }
       setUser(null)
@@ -739,8 +852,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Sesión cerrada",
         description: "Has cerrado sesión correctamente",
       })
+      console.log("✅ Logout successful")
     } catch (error) {
-      console.error("Logout error:", error)
+      console.error("❌ Logout error:", error)
     }
   }
 
@@ -754,14 +868,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!error) {
           const updatedUser = { ...user, avatar: photoUrl }
           setUser(updatedUser)
+          console.log("✅ Photo updated in Supabase")
         }
       } else {
         const updatedUser = { ...user, avatar: photoUrl }
         setUser(updatedUser)
         localStorage.setItem("currentUser", JSON.stringify(updatedUser))
+        console.log("✅ Photo updated in localStorage")
       }
     } catch (error) {
-      console.error("Update photo error:", error)
+      console.error("❌ Update photo error:", error)
     }
   }
 
@@ -780,6 +896,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             stats: updatedStats,
           }
           setUser(updatedUser)
+          console.log("✅ Stats updated in Supabase")
         }
       } else {
         const updatedUser = {
@@ -788,9 +905,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         setUser(updatedUser)
         localStorage.setItem("currentUser", JSON.stringify(updatedUser))
+        console.log("✅ Stats updated in localStorage")
       }
     } catch (error) {
-      console.error("Update stats error:", error)
+      console.error("❌ Update stats error:", error)
     }
   }
 
@@ -800,7 +918,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isLoading,
         isAuthenticated: !!user,
-        isSupabaseEnabled,
+        isSupabaseEnabled: isSupabaseEnabled && !!supabase,
         login,
         loginDemo,
         register,
