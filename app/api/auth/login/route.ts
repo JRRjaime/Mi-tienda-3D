@@ -1,57 +1,38 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { supabase } from '../../../../lib/supabase';
+import { NextResponse, type NextRequest } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
+    const { email, password } = await request.json();
 
-    // Aquí conectas con tu base de datos
-    // Ejemplo con tu sistema de base de datos:
+    const { data, error } =
+      await supabase.auth.signInWithPassword({ email, password });
 
-    // const user = await db.user.findUnique({
-    //   where: { email },
-    //   include: { profile: true, stats: true }
-    // })
-
-    // if (!user || !await bcrypt.compare(password, user.password)) {
-    //   return NextResponse.json(
-    //     { message: 'Email o contraseña incorrectos' },
-    //     { status: 401 }
-    //   )
-    // }
-
-    // Por ahora, simulamos la respuesta de tu base de datos
-    // REEMPLAZA ESTO con tu lógica de base de datos real
-    const mockUser = {
-      id: "1",
-      name: "Usuario de Base de Datos",
-      email: email,
-      avatar: "/placeholder.svg?height=40&width=40",
-      role: "user",
-      createdAt: new Date().toISOString(),
-      profileConfigured: true,
-      interests: ["Tecnología", "Diseño"],
-      preferences: {
-        notifications: true,
-        newsletter: true,
-        publicProfile: false,
-      },
-      stats: {
-        balance: 0,
-        totalOrders: 0,
-        totalSales: 0,
-        rating: 0,
-        modelsUploaded: 0,
-        totalDownloads: 0,
-        totalEarnings: 0,
-        totalViews: 0,
-        totalReviews: 0,
-        totalLikes: 0,
-      },
+    if (error) {
+      return NextResponse.json(
+        { message: 'Credenciales incorrectas' },
+        { status: 401 },
+      );
     }
 
-    return NextResponse.json(mockUser)
-  } catch (error) {
-    console.error("Login API error:", error)
-    return NextResponse.json({ message: "Error interno del servidor" }, { status: 500 })
+    // 1 · Crea la respuesta
+    const res = NextResponse.json({ ok: true });
+
+    // 2 · Añade cookie http-only (7 días)
+    res.cookies.set({
+      name   : 'sb-access-token',
+      value  : data.session!.access_token,
+      httpOnly: true,
+      path    : '/',
+      maxAge  : 60 * 60 * 24 * 7,
+    });
+
+    return res;
+  } catch (err) {
+    console.error('[LOGIN]', err);
+    return NextResponse.json(
+      { message: 'Error interno del servidor' },
+      { status: 500 },
+    );
   }
 }
