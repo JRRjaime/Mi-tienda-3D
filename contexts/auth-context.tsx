@@ -840,21 +840,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Función de cierre de sesión
   const logout = async () => {
     try {
+      console.log("🚪 Iniciando proceso de logout...")
+
       if (isSupabaseEnabled && supabase) {
-        console.log("👋 Logging out from Supabase...")
+        console.log("👋 Cerrando sesión en Supabase...")
         await supabase.auth.signOut()
-      } else {
-        console.log("👋 Logging out from demo mode...")
-        localStorage.removeItem("currentUser")
       }
+
+      // Limpiar completamente el localStorage
+      console.log("🧹 Limpiando localStorage...")
+      localStorage.removeItem("currentUser")
+      localStorage.removeItem("supabase.auth.token")
+      localStorage.removeItem(
+        "sb-" + process.env.NEXT_PUBLIC_SUPABASE_URL?.split("//")[1]?.split(".")[0] + "-auth-token",
+      )
+
+      // Limpiar sessionStorage también
+      sessionStorage.clear()
+
+      // Resetear el estado del usuario
+      console.log("🔄 Reseteando estado de usuario...")
       setUser(null)
+
+      // Forzar recarga de la página para limpiar cualquier cache
+      console.log("🔄 Recargando página...")
+
       toast({
         title: "Sesión cerrada",
         description: "Has cerrado sesión correctamente",
       })
-      console.log("✅ Logout successful")
+
+      // Pequeño delay antes de recargar para que se vea el toast
+      setTimeout(() => {
+        window.location.href = "/"
+      }, 1000)
+
+      console.log("✅ Logout completado")
     } catch (error) {
-      console.error("❌ Logout error:", error)
+      console.error("❌ Error durante logout:", error)
+
+      // Forzar logout incluso si hay error
+      localStorage.clear()
+      sessionStorage.clear()
+      setUser(null)
+      window.location.href = "/"
     }
   }
 
