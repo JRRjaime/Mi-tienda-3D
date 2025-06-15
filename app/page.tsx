@@ -148,50 +148,94 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
       {/* Floating Navigation */}
-      <nav className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-white/10 backdrop-blur-md rounded-full px-6 py-3 border border-white/20">
-        <div className="flex items-center space-x-8">
+      <nav className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-white/10 backdrop-blur-md rounded-full px-8 py-4 border border-white/20 shadow-lg">
+        <div className="flex items-center justify-between space-x-8 min-w-[800px]">
+          {/* Logo */}
           <div className="flex items-center space-x-2">
             <div className="bg-gradient-to-r from-cyan-400 to-purple-500 p-2 rounded-lg">
               <Printer className="h-5 w-5 text-white" />
             </div>
-            <span className="text-white font-bold">World 3D</span>
+            <span className="text-white font-bold text-lg">World 3D</span>
           </div>
 
-          <div className="hidden md:flex items-center space-x-6">
-            <a href="#explorar" className="text-white/80 hover:text-white transition-colors">
+          {/* Navigation Links */}
+          <div className="hidden lg:flex items-center space-x-6">
+            <a href="#explorar" className="text-white/80 hover:text-white transition-colors font-medium">
               Explorar
             </a>
-            <a href="#figuras" className="text-white/80 hover:text-white transition-colors">
+            <a href="#figuras" className="text-white/80 hover:text-white transition-colors font-medium">
               Figuras
             </a>
-            <a href="#hogar" className="text-white/80 hover:text-white transition-colors">
+            <a href="#hogar" className="text-white/80 hover:text-white transition-colors font-medium">
               Hogar
             </a>
-            <a href="#industrial" className="text-white/80 hover:text-white transition-colors">
+            <a href="#industrial" className="text-white/80 hover:text-white transition-colors font-medium">
               Industrial
             </a>
-            <a href="/collaboration" className="text-white/80 hover:text-white transition-colors">
+            <a href="/collaboration" className="text-white/80 hover:text-white transition-colors font-medium">
               🤝 Colaborar
             </a>
           </div>
 
+          {/* Search Bar */}
+          <div className="hidden md:flex relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
+            <input
+              type="search"
+              placeholder="Buscar modelos..."
+              className="pl-10 pr-4 py-2 w-48 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:w-64 transition-all duration-300"
+            />
+          </div>
+
+          {/* Auth & Theme */}
           <div className="flex items-center space-x-3">
             {!isAuthenticated ? (
               <Button
                 onClick={() => setIsAuthModalOpen(true)}
-                className="bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white border-0"
+                className="bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white border-0 px-6 py-2 font-medium"
               >
                 Iniciar Sesión
               </Button>
             ) : (
-              <div className="flex items-center space-x-2">
-                <span className="text-white/80 text-sm">Hola, {user?.name}</span>
+              <div className="flex items-center space-x-3">
+                <span className="text-white/80 text-sm font-medium">Hola, {user?.name}</span>
                 <Button variant="outline" size="sm" className="border-white/30 text-white hover:bg-white/10">
                   Mi Perfil
                 </Button>
               </div>
             )}
             <ThemeToggle />
+          </div>
+        </div>
+
+        {/* Mobile Menu - Solo visible en móvil */}
+        <div className="lg:hidden mt-4 pt-4 border-t border-white/20">
+          <div className="flex flex-wrap justify-center gap-4 mb-4">
+            <a href="#explorar" className="text-white/80 hover:text-white transition-colors text-sm">
+              Explorar
+            </a>
+            <a href="#figuras" className="text-white/80 hover:text-white transition-colors text-sm">
+              Figuras
+            </a>
+            <a href="#hogar" className="text-white/80 hover:text-white transition-colors text-sm">
+              Hogar
+            </a>
+            <a href="#industrial" className="text-white/80 hover:text-white transition-colors text-sm">
+              Industrial
+            </a>
+            <a href="/collaboration" className="text-white/80 hover:text-white transition-colors text-sm">
+              🤝 Colaborar
+            </a>
+          </div>
+
+          {/* Mobile Search */}
+          <div className="md:hidden relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
+            <input
+              type="search"
+              placeholder="Buscar modelos 3D..."
+              className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            />
           </div>
         </div>
       </nav>

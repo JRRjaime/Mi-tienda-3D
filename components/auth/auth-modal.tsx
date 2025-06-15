@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/contexts/auth-context"
-import { Loader2, Zap, AlertCircle } from "lucide-react"
+import { Loader2, Zap, AlertCircle, Mail, RefreshCw } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 
 interface AuthModalProps {
@@ -23,7 +23,7 @@ interface AuthModalProps {
 
 export function AuthModal({ isOpen, onClose, defaultTab = "login", preselectedRole = null }: AuthModalProps) {
   const [activeTab, setActiveTab] = useState<"login" | "register">(defaultTab)
-  const { login, loginDemo, register, isLoading, isSupabaseEnabled } = useAuth()
+  const { login, loginDemo, register, isLoading, isSupabaseEnabled, supabase, setIsLoading } = useAuth()
   const router = useRouter()
 
   // Estado para formulario de inicio de sesión
@@ -43,6 +43,9 @@ export function AuthModal({ isOpen, onClose, defaultTab = "login", preselectedRo
 
   // Estado para errores de validación
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const [showEmailConfirmation, setShowEmailConfirmation] = useState(false)
+  const [registeredEmail, setRegisteredEmail] = useState("")
 
   // Resetear el tab cuando se abre el modal
   useEffect(() => {
@@ -171,18 +174,16 @@ export function AuthModal({ isOpen, onClose, defaultTab = "login", preselectedRo
 
     if (success) {
       if (isSupabaseEnabled) {
-        // Con Supabase, mostrar mensaje de confirmación
+        // Mostrar pestaña de confirmación de email
+        setRegisteredEmail(registerData.email)
+        setShowEmailConfirmation(true)
+        setActiveTab("confirm-email" as any)
+
         toast({
           title: "¡Registro exitoso!",
-          description: "Revisa tu email para confirmar tu cuenta antes de iniciar sesión.",
+          description: "Revisa tu email para confirmar tu cuenta.",
           duration: 5000,
         })
-
-        // Cambiar a la pestaña de login después de un momento
-        setTimeout(() => {
-          setActiveTab("login")
-          setLoginData({ email: registerData.email, password: "" })
-        }, 2000)
       } else {
         // Sin Supabase, redirigir directamente
         onClose()
@@ -191,11 +192,46 @@ export function AuthModal({ isOpen, onClose, defaultTab = "login", preselectedRo
     }
   }
 
+  const handleResendConfirmation = async () => {
+    if (!isSupabaseEnabled || !supabase || !registeredEmail) return
+
+    setIsLoading(true)
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: registeredEmail,
+      })
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: "No se pudo reenviar el email. Intenta de nuevo.",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Email reenviado",
+          description: "Revisa tu bandeja de entrada.",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo reenviar el email.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   // Limpiar formularios cuando se cierre el modal
   const handleClose = () => {
     setLoginData({ email: "", password: "" })
     setRegisterData({ name: "", email: "", password: "", confirmPassword: "", role: "user" })
     setErrors({})
+    setShowEmailConfirmation(false)
+    setRegisteredEmail("")
     onClose()
   }
 
@@ -241,9 +277,12 @@ export function AuthModal({ isOpen, onClose, defaultTab = "login", preselectedRo
         </div>
 
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "login" | "register")} className="mt-4">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="login">Iniciar Sesión</TabsTrigger>
             <TabsTrigger value="register">Registrarse</TabsTrigger>
+            <TabsTrigger value="confirm-email" disabled={!showEmailConfirmation}>
+              Confirma Email
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="login">
@@ -443,6 +482,46 @@ export function AuthModal({ isOpen, onClose, defaultTab = "login", preselectedRo
                 </a>
               </p>
             </form>
+          </TabsContent>
+
+          <TabsContent value="confirm-email">
+            <div className="space-y-4 pt-4 text-center">
+              <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                <Mail className="h-8 w-8 text-blue-600" />
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold">¡Confirma tu email!</h3>
+                <p className="text-sm text-gray-600">Hemos enviado un enlace de confirmación a:</p>
+                <p className="text-sm font-medium text-blue-600">{registeredEmail}</p>
+              </div>
+
+              <div className="space-y-3 text-sm text-gray-500">
+                <p>• Revisa tu bandeja de entrada</p>
+                <p>• Busca también en spam/promociones</p>
+                <p>• Haz clic en el enlace para activar tu cuenta</p>
+              </div>
+
+              <div className="space-y-2">
+                <Button onClick={handleResendConfirmation} variant="outline" className="w-full" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Reenviando...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Reenviar email
+                    </>
+                  )}
+                </Button>
+
+                <Button onClick={() => setActiveTab("login")} variant="ghost" className="w-full">
+                  Volver al inicio de sesión
+                </Button>
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </DialogContent>
