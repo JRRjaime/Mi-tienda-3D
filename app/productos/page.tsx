@@ -8,6 +8,16 @@ import { useAuth } from "@/contexts/auth-context"
 import { Search, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Settings, LogOut, Heart, Upload, Users, Wrench } from "lucide-react"
 
 export default function ProductsPage() {
   const [showAuthModal, setShowAuthModal] = useState(false)
@@ -66,13 +76,96 @@ export default function ProductsPage() {
               {user ? (
                 <div className="flex items-center space-x-3">
                   <span className="text-gray-300 hidden sm:block">Hola, {user.name}</span>
-                  <Button
-                    onClick={() => (window.location.href = "/perfil")}
-                    className="bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 text-white px-4 py-2 rounded-lg transition-all duration-300"
-                  >
-                    <User className="w-4 h-4 mr-2" />
-                    Mi Perfil
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
+                          <AvatarFallback className="bg-gradient-to-r from-cyan-500 to-purple-600 text-white">
+                            {user.name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56 bg-slate-800 border-slate-700" align="end" forceMount>
+                      <DropdownMenuLabel className="font-normal">
+                        <div className="flex flex-col space-y-1">
+                          <p className="text-sm font-medium leading-none text-white">{user.name}</p>
+                          <p className="text-xs leading-none text-slate-400">{user.email}</p>
+                        </div>
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator className="bg-slate-700" />
+
+                      <DropdownMenuItem
+                        className="text-slate-300 hover:text-white hover:bg-slate-700 cursor-pointer"
+                        onClick={() => (window.location.href = "/perfil")}
+                      >
+                        <User className="mr-2 h-4 w-4" />
+                        <span>Mi Perfil</span>
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem
+                        className="text-slate-300 hover:text-white hover:bg-slate-700 cursor-pointer"
+                        onClick={() => (window.location.href = "/perfil?tab=favoritos")}
+                      >
+                        <Heart className="mr-2 h-4 w-4" />
+                        <span>Favoritos</span>
+                      </DropdownMenuItem>
+
+                      {(user.role === "creator" || user.role === "admin") && (
+                        <DropdownMenuItem
+                          className="text-slate-300 hover:text-white hover:bg-slate-700 cursor-pointer"
+                          onClick={() => (window.location.href = "/subir-modelo")}
+                        >
+                          <Upload className="mr-2 h-4 w-4" />
+                          <span>Subir Modelo</span>
+                        </DropdownMenuItem>
+                      )}
+
+                      {(user.role === "printer" || user.role === "admin") && (
+                        <DropdownMenuItem
+                          className="text-slate-300 hover:text-white hover:bg-slate-700 cursor-pointer"
+                          onClick={() => (window.location.href = "/printer-tools")}
+                        >
+                          <Wrench className="mr-2 h-4 w-4" />
+                          <span>Herramientas</span>
+                        </DropdownMenuItem>
+                      )}
+
+                      <DropdownMenuItem
+                        className="text-slate-300 hover:text-white hover:bg-slate-700 cursor-pointer"
+                        onClick={() => (window.location.href = "/collaboration")}
+                      >
+                        <Users className="mr-2 h-4 w-4" />
+                        <span>Colaboración</span>
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem
+                        className="text-slate-300 hover:text-white hover:bg-slate-700 cursor-pointer"
+                        onClick={() => (window.location.href = "/perfil?tab=configuracion")}
+                      >
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Configuración</span>
+                      </DropdownMenuItem>
+
+                      <DropdownMenuSeparator className="bg-slate-700" />
+
+                      <DropdownMenuItem
+                        className="text-red-400 hover:text-red-300 hover:bg-red-900/20 cursor-pointer"
+                        onClick={() => {
+                          logout()
+                          window.location.href = "/"
+                        }}
+                      >
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Cerrar Sesión</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               ) : (
                 <Button
