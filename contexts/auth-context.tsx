@@ -333,6 +333,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const getUser = async () => {
       try {
+        // Verificar si acabamos de hacer logout (flag temporal)
+        const isLoggingOut = sessionStorage.getItem("isLoggingOut")
+        if (isLoggingOut) {
+          sessionStorage.removeItem("isLoggingOut")
+          setIsLoading(false)
+          return
+        }
+
         if (isSupabaseEnabled && supabase) {
           console.log("🔍 Checking for existing Supabase session...")
           // Usar Supabase Auth
@@ -449,12 +457,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         } else {
           console.log("🧪 Using demo mode - checking localStorage...")
-          // Usar sistema mock - verificar localStorage
+          // Verificar localStorage solo si no hay flag de logout
           const storedUser = localStorage.getItem("currentUser")
           if (storedUser) {
             try {
-              setUser(JSON.parse(storedUser))
-              console.log("✅ Loaded demo user from localStorage")
+              const parsedUser = JSON.parse(storedUser)
+              // Verificar que el usuario sea válido
+              if (parsedUser && parsedUser.id && parsedUser.name) {
+                setUser(parsedUser)
+                console.log("✅ Loaded demo user from localStorage")
+              } else {
+                console.log("❌ Invalid user data, removing from localStorage")
+                localStorage.removeItem("currentUser")
+              }
             } catch (error) {
               console.error("❌ Error parsing stored user:", error)
               localStorage.removeItem("currentUser")
@@ -842,48 +857,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log("🚪 Iniciando proceso de logout...")
 
-      if (isSupabaseEnabled && supabase) {
-        console.log("👋 Cerrando sesión en Supabase...")
-        await supabase.auth.signOut()
-      }
+      // Marcar que estamos haciendo logout
+      sessionStorage.setItem("isLoggingOut", "true")
 
-      // Limpiar completamente el localStorage
-      console.log("🧹 Limpiando localStorage...")
-      localStorage.removeItem("currentUser")
-      localStorage.removeItem("supabase.auth.token")
-      localStorage.removeItem(
-        "sb-" + process.env.NEXT_PUBLIC_SUPABASE_URL?.split("//")[1]?.split(".")[0] + "-auth-token",
-      )
-
-      // Limpiar sessionStorage también
-      sessionStorage.clear()
-
-      // Resetear el estado del usuario
-      console.log("🔄 Reseteando estado de usuario...")
+      // PRIMERO: Resetear el estado del usuario inmediatamente
       setUser(null)
 
-      // Forzar recarga de la página para limpiar cualquier cache
-      console.log("🔄 Recargando página...")
+      // SEGUNDO: Limpiar completamente TODOS los datos de almacenamiento
+      console.log("🧹 Limpiando todos los datos de almacenamiento...")
 
+      // Limpiar localStorage completamente
+      const keysToRemove = ["currentUser", "supabase.auth.token", "sb-auth-token", "supabase-auth-token"]
+
+      // Buscar y eliminar todas las claves relacionadas con Supabase
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i)
+        if (key && (key.includes("supabase") || key.includes("sb-") || key === "currentUser")) {
+          localStorage.removeItem(key)
+        }
+      }
+
+      // Limpiar sessionStorage completamente
+      sessionStorage.clear()
+
+      // TERCERO: Si hay Supabase, cerrar sesión
+      if (isSupabaseEnabled && supabase) {
+        console.log("👋 Cerrando sesión en Supabase...")
+        try {
+          await supabase.auth.signOut()
+        } catch (supabaseError) {
+          console.warn("⚠️ Error al cerrar sesión en Supabase:", supabaseError)
+        }
+      }
+
+      // CUARTO: Mostrar confirmación
       toast({
         title: "Sesión cerrada",
         description: "Has cerrado sesión correctamente",
       })
 
-      // Pequeño delay antes de recargar para que se vea el toast
-      setTimeout(() => {
-        window.location.href = "/"
-      }, 1000)
+      // QUINTO: Redirigir sin recargar (para evitar que useEffect restaure el usuario)
+      console.log("🔄 Redirigiendo a página principal...")
+      window.location.replace("/")
 
       console.log("✅ Logout completado")
     } catch (error) {
       console.error("❌ Error durante logout:", error)
 
       // Forzar logout incluso si hay error
+      setUser(null)
       localStorage.clear()
       sessionStorage.clear()
-      setUser(null)
-      window.location.href = "/"
+      window.location.replace("/")
     }
   }
 
