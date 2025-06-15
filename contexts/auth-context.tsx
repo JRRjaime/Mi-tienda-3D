@@ -257,7 +257,11 @@ const MOCK_USERS = [
 
 // Función para verificar si Supabase está configurado
 const isSupabaseConfigured = () => {
-  return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+  return !!(
+    typeof window !== "undefined" &&
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  )
 }
 
 // Crear el contexto
@@ -289,9 +293,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const { createClientComponentClient } = await import("@supabase/auth-helpers-nextjs")
           const supabaseClient = createClientComponentClient()
           setSupabase(supabaseClient)
+          console.log("✅ Supabase initialized successfully")
         } catch (error) {
-          console.error("Error initializing Supabase:", error)
+          console.warn("⚠️ Supabase initialization failed, falling back to demo mode:", error)
         }
+      } else {
+        console.log("🧪 Running in demo mode - Supabase not configured")
       }
     }
 
@@ -304,45 +311,101 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         if (isSupabaseEnabled && supabase) {
           // Usar Supabase Auth
-          const {
-            data: { session },
-          } = await supabase.auth.getSession()
+          try {
+            const {
+              data: { session },
+              error: sessionError,
+            } = await supabase.auth.getSession()
 
-          if (session?.user) {
-            // Obtener datos adicionales del usuario desde la tabla profiles
-            const { data: profile } = await supabase.from("profiles").select("*").eq("id", session.user.id).single()
+            if (sessionError) {
+              console.warn("Session error:", sessionError)
+              setIsLoading(false)
+              return
+            }
 
-            if (profile) {
-              const userData: User = {
-                id: session.user.id,
-                name:
-                  profile.name || session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuario",
-                email: session.user.email || "",
-                avatar:
-                  profile.avatar || session.user.user_metadata?.avatar_url || `/placeholder.svg?height=40&width=40`,
-                role: profile.role || "user",
-                createdAt: session.user.created_at,
-                profileConfigured: profile.profile_configured || false,
-                interests: profile.interests || [],
-                preferences: {
-                  notifications: profile.preferences?.notifications ?? true,
-                  newsletter: profile.preferences?.newsletter ?? true,
-                  publicProfile: profile.preferences?.publicProfile ?? false,
-                },
-                stats: {
-                  balance: profile.stats?.balance || 0,
-                  totalOrders: profile.stats?.totalOrders || 0,
-                  totalSales: profile.stats?.totalSales || 0,
-                  rating: profile.stats?.rating || 0,
-                  modelsUploaded: profile.stats?.modelsUploaded || 0,
-                  totalDownloads: profile.stats?.totalDownloads || 0,
-                  totalEarnings: profile.stats?.totalEarnings || 0,
-                  totalViews: profile.stats?.totalViews || 0,
-                  totalReviews: profile.stats?.totalReviews || 0,
-                  totalLikes: profile.stats?.totalLikes || 0,
-                },
+            if (session?.user) {
+              // Obtener datos adicionales del usuario desde la tabla profiles
+              const { data: profile, error: profileError } = await supabase
+                .from("profiles")
+                .select("*")
+                .eq("id", session.user.id)
+                .single()
+
+              if (profileError) {
+                console.warn("Profile error:", profileError)
+                // Crear perfil básico si no existe
+                const basicProfile = {
+                  id: session.user.id,
+                  name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuario",
+                  email: session.user.email || "",
+                  avatar: session.user.user_metadata?.avatar_url || `/placeholder.svg?height=40&width=40`,
+                  role: "user" as const,
+                  createdAt: session.user.created_at,
+                  profileConfigured: false,
+                  interests: [],
+                  preferences: {
+                    notifications: true,
+                    newsletter: true,
+                    publicProfile: false,
+                  },
+                  stats: {
+                    balance: 0,
+                    totalOrders: 0,
+                    totalSales: 0,
+                    rating: 0,
+                    modelsUploaded: 0,
+                    totalDownloads: 0,
+                    totalEarnings: 0,
+                    totalViews: 0,
+                    totalReviews: 0,
+                    totalLikes: 0,
+                  },
+                }
+                setUser(basicProfile)
+              } else if (profile) {
+                const userData: User = {
+                  id: session.user.id,
+                  name:
+                    profile.name || session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuario",
+                  email: session.user.email || "",
+                  avatar:
+                    profile.avatar || session.user.user_metadata?.avatar_url || `/placeholder.svg?height=40&width=40`,
+                  role: profile.role || "user",
+                  createdAt: session.user.created_at,
+                  profileConfigured: profile.profile_configured || false,
+                  interests: profile.interests || [],
+                  preferences: {
+                    notifications: profile.preferences?.notifications ?? true,
+                    newsletter: profile.preferences?.newsletter ?? true,
+                    publicProfile: profile.preferences?.publicProfile ?? false,
+                  },
+                  stats: {
+                    balance: profile.stats?.balance || 0,
+                    totalOrders: profile.stats?.totalOrders || 0,
+                    totalSales: profile.stats?.totalSales || 0,
+                    rating: profile.stats?.rating || 0,
+                    modelsUploaded: profile.stats?.modelsUploaded || 0,
+                    totalDownloads: profile.stats?.totalDownloads || 0,
+                    totalEarnings: profile.stats?.totalEarnings || 0,
+                    totalViews: profile.stats?.totalViews || 0,
+                    totalReviews: profile.stats?.totalReviews || 0,
+                    totalLikes: profile.stats?.totalLikes || 0,
+                  },
+                }
+                setUser(userData)
               }
-              setUser(userData)
+            }
+          } catch (supabaseError) {
+            console.warn("Supabase error, falling back to localStorage:", supabaseError)
+            // Fallback a localStorage si Supabase falla
+            const storedUser = localStorage.getItem("currentUser")
+            if (storedUser) {
+              try {
+                setUser(JSON.parse(storedUser))
+              } catch (error) {
+                console.error("Error parsing stored user:", error)
+                localStorage.removeItem("currentUser")
+              }
             }
           }
         } else {
@@ -368,49 +431,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Escuchar cambios en la autenticación solo si Supabase está habilitado
     if (isSupabaseEnabled && supabase) {
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange(async (event: string, session: any) => {
-        if (event === "SIGNED_IN" && session?.user) {
-          // Usuario se ha autenticado
-          const { data: profile } = await supabase.from("profiles").select("*").eq("id", session.user.id).single()
+      try {
+        const {
+          data: { subscription },
+        } = supabase.auth.onAuthStateChange(async (event: string, session: any) => {
+          console.log("Auth state changed:", event)
 
-          if (profile) {
-            const userData: User = {
-              id: session.user.id,
-              name: profile.name || session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuario",
-              email: session.user.email || "",
-              avatar: profile.avatar || session.user.user_metadata?.avatar_url || `/placeholder.svg?height=40&width=40`,
-              role: profile.role || "user",
-              createdAt: session.user.created_at,
-              profileConfigured: profile.profile_configured || false,
-              interests: profile.interests || [],
-              preferences: {
-                notifications: profile.preferences?.notifications ?? true,
-                newsletter: profile.preferences?.newsletter ?? true,
-                publicProfile: profile.preferences?.publicProfile ?? false,
-              },
-              stats: {
-                balance: profile.stats?.balance || 0,
-                totalOrders: profile.stats?.totalOrders || 0,
-                totalSales: profile.stats?.totalSales || 0,
-                rating: profile.stats?.rating || 0,
-                modelsUploaded: profile.stats?.modelsUploaded || 0,
-                totalDownloads: profile.stats?.totalDownloads || 0,
-                totalEarnings: profile.stats?.totalEarnings || 0,
-                totalViews: profile.stats?.totalViews || 0,
-                totalReviews: profile.stats?.totalReviews || 0,
-                totalLikes: profile.stats?.totalLikes || 0,
-              },
+          if (event === "SIGNED_IN" && session?.user) {
+            // Usuario se ha autenticado
+            try {
+              const { data: profile } = await supabase.from("profiles").select("*").eq("id", session.user.id).single()
+
+              if (profile) {
+                const userData: User = {
+                  id: session.user.id,
+                  name:
+                    profile.name || session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuario",
+                  email: session.user.email || "",
+                  avatar:
+                    profile.avatar || session.user.user_metadata?.avatar_url || `/placeholder.svg?height=40&width=40`,
+                  role: profile.role || "user",
+                  createdAt: session.user.created_at,
+                  profileConfigured: profile.profile_configured || false,
+                  interests: profile.interests || [],
+                  preferences: {
+                    notifications: profile.preferences?.notifications ?? true,
+                    newsletter: profile.preferences?.newsletter ?? true,
+                    publicProfile: profile.preferences?.publicProfile ?? false,
+                  },
+                  stats: {
+                    balance: profile.stats?.balance || 0,
+                    totalOrders: profile.stats?.totalOrders || 0,
+                    totalSales: profile.stats?.totalSales || 0,
+                    rating: profile.stats?.rating || 0,
+                    modelsUploaded: profile.stats?.modelsUploaded || 0,
+                    totalDownloads: profile.stats?.totalDownloads || 0,
+                    totalEarnings: profile.stats?.totalEarnings || 0,
+                    totalViews: profile.stats?.totalViews || 0,
+                    totalReviews: profile.stats?.totalReviews || 0,
+                    totalLikes: profile.stats?.totalLikes || 0,
+                  },
+                }
+                setUser(userData)
+              }
+            } catch (error) {
+              console.warn("Error loading profile after sign in:", error)
             }
-            setUser(userData)
+          } else if (event === "SIGNED_OUT") {
+            setUser(null)
           }
-        } else if (event === "SIGNED_OUT") {
-          setUser(null)
-        }
-      })
+        })
 
-      return () => subscription.unsubscribe()
+        return () => subscription.unsubscribe()
+      } catch (error) {
+        console.warn("Error setting up auth listener:", error)
+      }
     }
   }, [isSupabaseEnabled, supabase])
 
@@ -427,6 +502,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
 
         if (error) {
+          console.error("Supabase login error:", error)
           toast({
             title: "Error de inicio de sesión",
             description:
@@ -542,6 +618,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
 
         if (error) {
+          console.error("Supabase register error:", error)
           toast({
             title: "Error de registro",
             description: error.message === "User already registered" ? "Este email ya está en uso" : error.message,
@@ -554,23 +631,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (data.user) {
           const profileData = generateCleanProfile(role)
 
-          const { error: profileError } = await supabase.from("profiles").insert({
-            id: data.user.id,
-            name,
-            email,
-            role,
-            profile_configured: true,
-            interests: profileData.interests,
-            preferences: {
-              notifications: true,
-              newsletter: role !== "printer",
-              publicProfile: role !== "user",
-            },
-            stats: profileData.stats,
-          })
+          try {
+            const { error: profileError } = await supabase.from("profiles").insert({
+              id: data.user.id,
+              name,
+              email,
+              role,
+              profile_configured: true,
+              interests: profileData.interests,
+              preferences: {
+                notifications: true,
+                newsletter: role !== "printer",
+                publicProfile: role !== "user",
+              },
+              stats: profileData.stats,
+            })
 
-          if (profileError) {
-            console.error("Error creating profile:", profileError)
+            if (profileError) {
+              console.warn("Error creating profile:", profileError)
+            }
+          } catch (profileError) {
+            console.warn("Profile creation failed:", profileError)
           }
 
           toast({
