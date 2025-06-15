@@ -167,7 +167,7 @@ const generateRandomUser = () => {
   }
 }
 
-// USUARIOS MOCK PARA DESARROLLO (TODO EN 0) - Hacemos esto mutable
+// USUARIOS MOCK PARA DESARROLLO (TODO EN 0)
 const MOCK_USERS = [
   {
     id: "1",
@@ -518,7 +518,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Función de registro ARREGLADA
+  // Función de registro
   const register = async (
     name: string,
     email: string,
@@ -573,45 +573,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.error("Error creating profile:", profileError)
           }
 
-          // Si hay una sesión inmediata, configurar el usuario
-          if (data.session) {
-            const userData: User = {
-              id: data.user.id,
-              name,
-              email,
-              avatar: `/placeholder.svg?height=40&width=40&query=${name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")}`,
-              role,
-              createdAt: data.user.created_at,
-              profileConfigured: true,
-              interests: profileData.interests,
-              preferences: {
-                notifications: true,
-                newsletter: role !== "printer",
-                publicProfile: role !== "user",
-              },
-              stats: profileData.stats,
-            }
-            setUser(userData)
-          }
-
           toast({
-            title: "¡Registro exitoso!",
-            description: data.session
-              ? `¡Bienvenido ${name}! Tu cuenta ha sido creada.`
-              : `¡Bienvenido ${name}! Revisa tu email para confirmar tu cuenta.`,
+            title: "Registro exitoso",
+            description: `¡Bienvenido ${name}! Revisa tu email para confirmar tu cuenta.`,
           })
 
           setIsLoading(false)
           return true
         }
       } else {
-        // Usar sistema mock - ARREGLADO
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+        // Usar sistema mock
+        await new Promise((resolve) => setTimeout(resolve, 1500))
 
-        // Verificar si el email ya existe
         if (MOCK_USERS.some((u) => u.email === email)) {
           toast({
             title: "Error de registro",
@@ -625,7 +598,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const profileData = generateCleanProfile(role)
 
         const newUser = {
-          id: `user-${Date.now()}`,
+          id: `${Date.now()}`,
           name,
           email,
           password,
@@ -645,17 +618,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           stats: profileData.stats,
         }
 
-        // IMPORTANTE: Agregar el usuario a la lista de usuarios mock
-        MOCK_USERS.push(newUser)
-
-        // Iniciar sesión automáticamente con el nuevo usuario
         const { password: _, ...userWithoutPassword } = newUser
         setUser(userWithoutPassword)
         localStorage.setItem("currentUser", JSON.stringify(userWithoutPassword))
 
         toast({
-          title: "¡Registro exitoso!",
-          description: `¡Bienvenido ${name}! Tu cuenta ha sido creada y ya estás conectado.`,
+          title: "Registro exitoso",
+          description: `¡Bienvenido ${name}! Configurando tu experiencia...`,
         })
 
         setIsLoading(false)
