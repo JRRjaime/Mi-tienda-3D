@@ -253,6 +253,34 @@ const MOCK_USERS = [
       totalLikes: 0,
     },
   },
+  {
+    id: "admin-001",
+    name: "Administrador Principal",
+    email: "admin@3dplatform.com",
+    password: "Admin2024!@#$SecurePass",
+    avatar: "/placeholder.svg?height=40&width=40",
+    role: "admin" as const,
+    createdAt: "2023-01-01T00:00:00Z",
+    profileConfigured: true,
+    interests: ["Administración", "Analytics", "Monetización", "Gestión"],
+    preferences: {
+      notifications: true,
+      newsletter: false,
+      publicProfile: false,
+    },
+    stats: {
+      balance: 0,
+      totalOrders: 0,
+      totalSales: 0,
+      rating: 5.0,
+      modelsUploaded: 0,
+      totalDownloads: 0,
+      totalEarnings: 0, // Aquí se acumularán las comisiones
+      totalViews: 0,
+      totalReviews: 0,
+      totalLikes: 0,
+    },
+  },
 ]
 
 // Función mejorada para verificar si Supabase está configurado correctamente
