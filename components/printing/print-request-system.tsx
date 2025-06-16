@@ -9,8 +9,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { MapPin, Star, Clock, Package, MessageCircle, ArrowLeft } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { MapPin, Star, Clock, MessageCircle, ArrowLeft } from "lucide-react"
+import Link from "next/link"
 
 interface PrinterType {
   id: string
@@ -70,43 +70,24 @@ const samplePrinters: PrinterType[] = [
   },
 ]
 
-const materials = ["PLA", "ABS", "PETG", "TPU", "Nylon", "ASA", "PC", "Wood Fill", "Metal Fill", "Resina"]
-const colors = ["Blanco", "Negro", "Rojo", "Azul", "Verde", "Amarillo", "Naranja", "Morado", "Rosa", "Gris"]
+const materials = ["PLA", "ABS", "PETG", "TPU", "Nylon"]
+const colors = ["Blanco", "Negro", "Rojo", "Azul", "Verde"]
 const qualities = [
-  { value: "draft", label: "Borrador (0.3mm)", multiplier: 0.8 },
   { value: "normal", label: "Normal (0.2mm)", multiplier: 1.0 },
   { value: "fine", label: "Fino (0.15mm)", multiplier: 1.3 },
-  { value: "ultra", label: "Ultra Fino (0.1mm)", multiplier: 1.6 },
 ]
 
 export function PrintRequestSystem({ modelId, modelTitle, modelImage }: PrintRequestSystemProps) {
-  const router = useRouter()
   const [selectedPrinter, setSelectedPrinter] = useState<PrinterType | null>(null)
   const [printSettings, setPrintSettings] = useState({
     material: "",
     color: "",
     quality: "normal",
     quantity: 1,
-    infill: 20,
-    supports: false,
     notes: "",
   })
   const [estimatedWeight] = useState(25)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [sortBy, setSortBy] = useState("distance")
-
-  const sortedPrinters = [...samplePrinters].sort((a, b) => {
-    switch (sortBy) {
-      case "price":
-        return a.pricePerGram - b.pricePerGram
-      case "rating":
-        return b.rating - a.rating
-      case "turnaround":
-        return Number.parseInt(a.turnaround) - Number.parseInt(b.turnaround)
-      default:
-        return Number.parseFloat(a.distance) - Number.parseFloat(b.distance)
-    }
-  })
 
   const calculatePrice = (printer: PrinterType) => {
     const basePrice = estimatedWeight * printer.pricePerGram * printSettings.quantity
@@ -114,26 +95,29 @@ export function PrintRequestSystem({ modelId, modelTitle, modelImage }: PrintReq
     return (basePrice * qualityMultiplier).toFixed(2)
   }
 
-  const handleSubmitRequest = async () => {
+  const handleSubmitRequest = () => {
     if (!selectedPrinter || !printSettings.material || !printSettings.color) {
       alert("Por favor completa todos los campos obligatorios")
       return
     }
 
     setIsSubmitting(true)
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    alert(`Solicitud enviada a ${selectedPrinter.name}`)
-    setIsSubmitting(false)
+    setTimeout(() => {
+      alert(`Solicitud enviada a ${selectedPrinter.name}`)
+      setIsSubmitting(false)
+    }, 2000)
   }
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-8">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
-        <Button variant="ghost" size="sm" onClick={() => router.back()} className="text-white hover:bg-white/10">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Volver
-        </Button>
+        <Link href="/modelos">
+          <Button variant="ghost" size="sm" className="text-white hover:bg-white/10">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Volver
+          </Button>
+        </Link>
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent">
             Solicitar Impresión 3D
@@ -162,29 +146,8 @@ export function PrintRequestSystem({ modelId, modelTitle, modelImage }: PrintReq
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Lista de Impresores */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Filtros */}
-          <div className="flex gap-4">
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="bg-gray-700 border-gray-600 text-white w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-700">
-                <SelectItem value="distance" className="text-white hover:bg-gray-700">
-                  Más Cercano
-                </SelectItem>
-                <SelectItem value="price" className="text-white hover:bg-gray-700">
-                  Menor Precio
-                </SelectItem>
-                <SelectItem value="rating" className="text-white hover:bg-gray-700">
-                  Mejor Valorado
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Impresores */}
           <div className="space-y-4">
-            {sortedPrinters.map((printer) => (
+            {samplePrinters.map((printer) => (
               <Card
                 key={printer.id}
                 className={`bg-gray-800/50 border-gray-700 cursor-pointer transition-all ${
@@ -223,15 +186,11 @@ export function PrintRequestSystem({ modelId, modelTitle, modelImage }: PrintReq
                           <span>{printer.location}</span>
                           <span>• {printer.distance}</span>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Package className="h-3 w-3" />
-                          <span>{printer.completedOrders} pedidos</span>
-                        </div>
                       </div>
 
                       <div className="flex items-center justify-between">
                         <div className="flex flex-wrap gap-1">
-                          {printer.materials.slice(0, 4).map((material) => (
+                          {printer.materials.slice(0, 3).map((material) => (
                             <Badge key={material} variant="secondary" className="text-xs">
                               {material}
                             </Badge>
@@ -256,7 +215,7 @@ export function PrintRequestSystem({ modelId, modelTitle, modelImage }: PrintReq
         <div className="space-y-6">
           <Card className="bg-gray-800/50 border-gray-700">
             <CardHeader>
-              <CardTitle className="text-white">Configuración de Impresión</CardTitle>
+              <CardTitle className="text-white">Configuración</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -302,27 +261,6 @@ export function PrintRequestSystem({ modelId, modelTitle, modelImage }: PrintReq
               </div>
 
               <div>
-                <Label htmlFor="quality" className="text-gray-300">
-                  Calidad
-                </Label>
-                <Select
-                  value={printSettings.quality}
-                  onValueChange={(value) => setPrintSettings((prev) => ({ ...prev, quality: value }))}
-                >
-                  <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-gray-700">
-                    {qualities.map((quality) => (
-                      <SelectItem key={quality.value} value={quality.value} className="text-white hover:bg-gray-700">
-                        {quality.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
                 <Label htmlFor="quantity" className="text-gray-300">
                   Cantidad
                 </Label>
@@ -330,7 +268,7 @@ export function PrintRequestSystem({ modelId, modelTitle, modelImage }: PrintReq
                   id="quantity"
                   type="number"
                   min="1"
-                  max="100"
+                  max="10"
                   value={printSettings.quantity}
                   onChange={(e) =>
                     setPrintSettings((prev) => ({ ...prev, quantity: Number.parseInt(e.target.value) || 1 }))
@@ -341,7 +279,7 @@ export function PrintRequestSystem({ modelId, modelTitle, modelImage }: PrintReq
 
               <div>
                 <Label htmlFor="notes" className="text-gray-300">
-                  Notas adicionales
+                  Notas
                 </Label>
                 <Textarea
                   id="notes"
@@ -358,7 +296,7 @@ export function PrintRequestSystem({ modelId, modelTitle, modelImage }: PrintReq
           {selectedPrinter && (
             <Card className="bg-gray-800/50 border-gray-700">
               <CardHeader>
-                <CardTitle className="text-white">Resumen del Pedido</CardTitle>
+                <CardTitle className="text-white">Resumen</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-3">
@@ -376,7 +314,7 @@ export function PrintRequestSystem({ modelId, modelTitle, modelImage }: PrintReq
                 <Separator className="bg-gray-700" />
 
                 <div className="flex justify-between items-center">
-                  <span className="text-white font-semibold">Precio Total:</span>
+                  <span className="text-white font-semibold">Total:</span>
                   <span className="text-cyan-400 font-bold text-lg">${calculatePrice(selectedPrinter)}</span>
                 </div>
 
