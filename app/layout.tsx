@@ -12,6 +12,7 @@ import { PlatformDataProvider } from "@/contexts/platform-data-context"
 import { CollaborationProvider } from "@/contexts/collaboration-context"
 import { StatsProvider } from "@/contexts/stats-context"
 import { Toaster } from "@/components/ui/toaster"
+import { ChatSystem } from "@/components/chat/chat-system"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -39,6 +40,7 @@ export default function RootLayout({
                       <StatsProvider>
                         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
                           {children}
+                          <ChatSystem />
                           <Toaster />
                         </ThemeProvider>
                       </StatsProvider>
