@@ -19,6 +19,7 @@ import {
   Printer,
   ShoppingBag,
   BarChart3,
+  Users,
 } from "lucide-react"
 import Link from "next/link"
 import { ProfileSettings } from "@/components/profile-settings"
@@ -34,8 +35,9 @@ import { AnalyticsDashboard } from "@/components/analytics-dashboard"
 import { NotificationSystem } from "@/components/notification-system"
 import { ChatSystem } from "@/components/chat/chat-system"
 import { useAuth } from "@/contexts/auth-context"
-// Importar el nuevo componente de foto de perfil
 import { ProfilePhotoUpload } from "@/components/profile/profile-photo-upload"
+import { FollowStats } from "@/components/follow/follow-stats"
+import { FollowersList } from "@/components/follow/followers-list"
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("perfil")
@@ -139,6 +141,7 @@ export default function ProfilePage() {
   const getTabsForProfile = () => {
     const baseTabs = [
       { id: "perfil", label: "Mi Perfil", icon: User },
+      { id: "seguidores", label: "Seguidores", icon: Users },
       { id: "analytics", label: "Analytics", icon: BarChart3 },
       { id: "cartera", label: "Cartera", icon: Wallet },
       { id: "envios", label: "Envíos", icon: Package },
@@ -204,10 +207,9 @@ export default function ProfilePage() {
       <div className="container mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Sidebar con información del usuario */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-6">
             <Card className="bg-white/5 backdrop-blur-sm border-white/10">
               <CardHeader className="text-center">
-                {/* Usar el nuevo componente de foto de perfil */}
                 <ProfilePhotoUpload currentPhoto={user.avatar} userName={user.name} />
                 <CardTitle className="text-white">{user.name}</CardTitle>
                 <CardDescription className="text-gray-300">{user.email}</CardDescription>
@@ -221,6 +223,9 @@ export default function ProfilePage() {
                 <div className="text-center text-sm text-gray-400">Miembro desde {getJoinDate()}</div>
               </CardContent>
             </Card>
+
+            {/* Estadísticas de seguimiento */}
+            <FollowStats userId={user.id} userName={user.name} showTitle={false} />
           </div>
 
           {/* Contenido principal */}
@@ -240,6 +245,13 @@ export default function ProfilePage() {
 
               <TabsContent value="perfil">
                 <ProfileSettings user={user} />
+              </TabsContent>
+
+              <TabsContent value="seguidores">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <FollowersList userId={user.id} type="followers" />
+                  <FollowersList userId={user.id} type="following" />
+                </div>
               </TabsContent>
 
               <TabsContent value="analytics">

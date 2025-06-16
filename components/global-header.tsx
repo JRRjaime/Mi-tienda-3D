@@ -13,12 +13,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Search, User, LogOut, Settings, Menu, Heart, Upload, Users, Wrench } from "lucide-react"
+import { Search, User, LogOut, Settings, Heart, Upload, Wrench } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { AuthModal } from "@/components/auth/auth-modal"
 import { useAuth } from "@/contexts/auth-context"
-import { NotificationSystem } from "@/components/notification-system"
+import { EnhancedCartSystem } from "@/components/cart/enhanced-cart-system"
 
 export function GlobalHeader() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -32,8 +31,6 @@ export function GlobalHeader() {
     <>
       <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/20 backdrop-blur-md">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          
-
           {/* Búsqueda móvil expandida */}
           {isSearchOpen && (
             <div className="lg:hidden py-4 border-t border-white/10">
@@ -46,6 +43,76 @@ export function GlobalHeader() {
               </div>
             </div>
           )}
+        </div>
+        <div className="container mx-auto flex items-center justify-between px-4 py-2 sm:px-6 lg:px-8">
+          <Link href="/" className="font-bold text-white">
+            3D Models
+          </Link>
+
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
+            <EnhancedCartSystem />
+            {isAuthenticated ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user?.image || ""} alt={user?.name || "User"} />
+                      <AvatarFallback>{user?.name?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Perfil</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  {isCreator && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/creator/dashboard">
+                        <Upload className="mr-2 h-4 w-4" />
+                        <span>Panel de Creador</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  {isPrinter && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/printer/dashboard">
+                        <Wrench className="mr-2 h-4 w-4" />
+                        <span>Panel de Impresor</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem asChild>
+                    <Link href="/favorites">
+                      <Heart className="mr-2 h-4 w-4" />
+                      <span>Favoritos</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Ajustes</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => logout()} className="cursor-pointer">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Cerrar Sesión</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button onClick={() => setIsAuthModalOpen(true)}>
+                <User className="mr-2 h-4 w-4" />
+                <span>Acceder</span>
+              </Button>
+            )}
+          </div>
         </div>
       </header>
 

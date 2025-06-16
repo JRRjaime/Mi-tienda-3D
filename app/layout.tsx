@@ -8,8 +8,10 @@ import { StatsProvider } from "@/contexts/stats-context"
 import { CartProvider } from "@/contexts/cart-context"
 import { WalletProvider } from "@/contexts/wallet-context"
 import { CollaborationProvider } from "@/contexts/collaboration-context"
+import { PlatformDataProvider } from "@/contexts/platform-data-context"
 import { GlobalHeader } from "@/components/global-header"
 import { Toaster } from "@/components/ui/toaster"
+import { FollowProvider } from "@/contexts/follow-context"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -37,19 +39,23 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange={false}>
           <AuthProvider>
-            <StatsProvider>
-              <CartProvider>
-                <WalletProvider>
-                  <CollaborationProvider>
-                    <div className="min-h-screen bg-gradient-to-br from-cyan-900 via-blue-900 to-purple-900">
-                      <GlobalHeader />
-                      <main>{children}</main>
-                      <Toaster />
-                    </div>
-                  </CollaborationProvider>
-                </WalletProvider>
-              </CartProvider>
-            </StatsProvider>
+            <FollowProvider>
+              <PlatformDataProvider>
+                <StatsProvider>
+                  <CartProvider>
+                    <WalletProvider>
+                      <CollaborationProvider>
+                        <div className="min-h-screen bg-gradient-to-br from-cyan-900 via-blue-900 to-purple-900">
+                          <GlobalHeader />
+                          <main>{children}</main>
+                          <Toaster />
+                        </div>
+                      </CollaborationProvider>
+                    </WalletProvider>
+                  </CartProvider>
+                </StatsProvider>
+              </PlatformDataProvider>
+            </FollowProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

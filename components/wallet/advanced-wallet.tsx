@@ -35,7 +35,7 @@ import {
 } from "lucide-react"
 import { useWallet } from "@/contexts/wallet-context"
 import { useToast } from "@/hooks/use-toast"
-import { CreditCardForm } from "@/components/payment/credit-card-form"
+import { EnhancedCreditCardForm } from "@/components/payment/enhanced-credit-card-form"
 
 export function AdvancedWallet() {
   const {
@@ -52,8 +52,6 @@ export function AdvancedWallet() {
 
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("overview")
-  const [addFundsAmount, setAddFundsAmount] = useState("")
-  const [addFundsMethod, setAddFundsMethod] = useState("")
   const [withdrawAmount, setWithdrawAmount] = useState("")
   const [withdrawMethod, setWithdrawMethod] = useState("")
   const [paymentAmount, setPaymentAmount] = useState("")
@@ -68,20 +66,8 @@ export function AdvancedWallet() {
 
   const recentTransactions = transactions.slice(0, 10)
 
-  const handleAddFunds = async () => {
-    if (!addFundsAmount || !addFundsMethod) return
-    const amount = Number.parseFloat(addFundsAmount)
-    if (isNaN(amount) || amount <= 0) {
-      toast({
-        title: "Cantidad inválida",
-        description: "Por favor ingresa una cantidad válida",
-        variant: "destructive",
-      })
-      return
-    }
-    await addFunds(Number.parseFloat(addFundsAmount), addFundsMethod)
-    setAddFundsAmount("")
-    setAddFundsMethod("")
+  const handleAddFundsSuccess = async (amount: number) => {
+    await addFunds(amount, "stripe")
   }
 
   const handleWithdraw = async () => {
@@ -180,10 +166,6 @@ export function AdvancedWallet() {
     )
   }
 
-  const getFilteredNotifications = () => {
-    return transactions
-  }
-
   return (
     <div className="space-y-6">
       {/* Balance Cards */}
@@ -251,7 +233,7 @@ export function AdvancedWallet() {
           </div>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-4">
-          {/* Añadir Fondos */}
+          {/* Añadir Fondos con Stripe */}
           <Dialog>
             <DialogTrigger asChild>
               <Button className="bg-gradient-to-r from-green-500 to-emerald-500">
@@ -263,86 +245,10 @@ export function AdvancedWallet() {
               <DialogHeader>
                 <DialogTitle className="text-white">Añadir Fondos</DialogTitle>
                 <DialogDescription className="text-gray-400">
-                  Recarga tu cartera con fondos adicionales
+                  Recarga tu cartera con fondos adicionales usando Stripe
                 </DialogDescription>
               </DialogHeader>
-
-              {addFundsMethod === "credit_card" && addFundsAmount ? (
-                <CreditCardForm
-                  amount={Number.parseFloat(addFundsAmount)}
-                  onSuccess={() => {
-                    handleAddFunds()
-                    setAddFundsAmount("")
-                    setAddFundsMethod("")
-                  }}
-                  onCancel={() => {
-                    setAddFundsMethod("")
-                  }}
-                />
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="amount" className="text-white">
-                      Cantidad
-                    </Label>
-                    <Input
-                      id="amount"
-                      type="number"
-                      placeholder="0.00"
-                      value={addFundsAmount}
-                      onChange={(e) => setAddFundsAmount(e.target.value)}
-                      className="bg-white/5 border-white/20 text-white"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-white">Método de pago</Label>
-                    <div className="grid grid-cols-1 gap-2 mt-2">
-                      <Button
-                        variant={addFundsMethod === "credit_card" ? "default" : "outline"}
-                        onClick={() => setAddFundsMethod("credit_card")}
-                        className="justify-start h-12"
-                      >
-                        <CreditCard className="h-4 w-4 mr-2" />
-                        <div className="text-left">
-                          <div>Tarjeta de Crédito/Débito</div>
-                          <div className="text-xs opacity-70">Visa, Mastercard, Amex</div>
-                        </div>
-                      </Button>
-                      <Button
-                        variant={addFundsMethod === "bank_transfer" ? "default" : "outline"}
-                        onClick={() => setAddFundsMethod("bank_transfer")}
-                        className="justify-start h-12"
-                      >
-                        <Building2 className="h-4 w-4 mr-2" />
-                        <div className="text-left">
-                          <div>Transferencia Bancaria</div>
-                          <div className="text-xs opacity-70">1-3 días hábiles</div>
-                        </div>
-                      </Button>
-                    </div>
-                  </div>
-
-                  {addFundsMethod === "credit_card" && addFundsAmount && (
-                    <Button
-                      onClick={() => {}} // El formulario se mostrará automáticamente
-                      disabled={!addFundsAmount}
-                      className="w-full bg-gradient-to-r from-green-500 to-emerald-500"
-                    >
-                      Continuar con Tarjeta
-                    </Button>
-                  )}
-
-                  {addFundsMethod === "bank_transfer" && (
-                    <Button
-                      onClick={handleAddFunds}
-                      disabled={isLoading || !addFundsAmount}
-                      className="w-full bg-gradient-to-r from-blue-500 to-purple-500"
-                    >
-                      {isLoading ? "Procesando..." : "Continuar con Transferencia"}
-                    </Button>
-                  )}
-                </div>
-              )}
+              <EnhancedCreditCardForm onSuccess={handleAddFundsSuccess} onCancel={() => {}} />
             </DialogContent>
           </Dialog>
 

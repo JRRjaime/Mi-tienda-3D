@@ -13,6 +13,8 @@ import { Badge } from "@/components/ui/badge"
 import { Upload, X, FileText, ImageIcon, Plus, DollarSign, Tag, Info, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useStats } from "@/contexts/stats-context"
+import { usePlatformData } from "@/contexts/platform-data-context"
+import { useAuth } from "@/contexts/auth-context"
 
 interface UploadedFile {
   id: string
@@ -44,6 +46,8 @@ export function CreatorUploadSection() {
   const imageInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
   const { incrementStat, updateStats } = useStats()
+  const { addModel } = usePlatformData()
+  const { user } = useAuth()
 
   const categories = [
     "Figuras y Coleccionables",
@@ -166,6 +170,11 @@ export function CreatorUploadSection() {
     }))
   }
 
+  const getDifficultyLabel = (value: string) => {
+    const diff = difficulties.find((d) => d.value === value)
+    return diff ? diff.label : "Fácil"
+  }
+
   const handleSubmit = async () => {
     if (!modelData.title || !modelData.description || !modelData.category || files.length === 0) {
       toast({
@@ -185,11 +194,42 @@ export function CreatorUploadSection() {
       return
     }
 
+    if (!user) {
+      toast({
+        title: "Error de autenticación",
+        description: "Debes estar logueado para subir modelos",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsUploading(true)
 
     try {
       // Simular subida
       await new Promise((resolve) => setTimeout(resolve, 3000))
+
+      // Crear el modelo para agregar a la tienda
+      const newModel = {
+        title: modelData.title,
+        description: modelData.description,
+        price: Number.parseFloat(modelData.price) || 0,
+        authorId: user?.id || "anonymous",
+        authorName: user?.name || "Usuario Anónimo",
+        category: modelData.category,
+        tags: modelData.tags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter((tag) => tag.length > 0),
+        imageUrl: images[0]?.preview || "/placeholder.svg?height=300&width=300&text=3D+Model",
+        fileUrl: files[0]?.url || "",
+        materials: modelData.materials,
+        printTime: modelData.printTime || "No especificado",
+        difficulty: getDifficultyLabel(modelData.difficulty) as "Fácil" | "Intermedio" | "Avanzado",
+      }
+
+      // Agregar el modelo a la tienda
+      addModel(newModel)
 
       // Actualizar estadísticas
       incrementStat("modelsUploaded", 1)
@@ -199,7 +239,7 @@ export function CreatorUploadSection() {
 
       toast({
         title: "¡Modelo subido exitosamente!",
-        description: "Tu modelo está siendo procesado y estará disponible pronto",
+        description: "Tu modelo ya está disponible en la tienda y está siendo procesado",
       })
 
       // Reset form
