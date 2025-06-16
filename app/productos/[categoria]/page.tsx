@@ -1,35 +1,38 @@
-import type { Metadata } from "next"
-import { notFound } from "next/navigation"
+import { CategoryProjects } from "@/components/category-projects"
 
-import { ProductGrid } from "@/components/product-grid"
-import { getProducts } from "@/lib/shopify"
-
-interface Props {
+interface CategoryPageProps {
   params: {
     categoria: string
   }
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { categoria } = params
-
-  return {
-    title: `Productos - ${categoria}`,
-  }
+const categoryNames: Record<string, string> = {
+  "figuras-coleccion": "Figuras de Colección",
+  industrial: "Industrial",
+  medico: "Médico",
+  joyeria: "Joyería",
+  hogar: "Hogar y Decoración",
+  educativo: "Educativo",
+  automotriz: "Automotriz",
+  arte: "Arte y Diseño",
 }
 
-export default async function CategoryPage({ params }: Props) {
-  const { categoria } = params
-  const products = await getProducts({ collection: categoria })
-
-  if (!products || products.length === 0) {
-    notFound()
-  }
+export default function CategoryPage({ params }: CategoryPageProps) {
+  const categoryName = categoryNames[params.categoria] || "Categoría"
 
   return (
-    <div className="container mx-auto py-6">
-      <h1 className="text-2xl font-bold mb-4 capitalize">{categoria}</h1>
-      <ProductGrid products={products} />
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Header simple */}
+      <div className="bg-black/20 backdrop-blur-md border-b border-white/10 p-4">
+        <div className="container mx-auto">
+          <h1 className="text-2xl font-bold text-white">{categoryName}</h1>
+        </div>
+      </div>
+
+      {/* Main content */}
+      <main className="container mx-auto px-6 py-12">
+        <CategoryProjects categoria={params.categoria} />
+      </main>
     </div>
   )
 }

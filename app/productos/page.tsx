@@ -1,7 +1,6 @@
 "use client"
 
 import { ProductsGrid } from "@/components/products-grid"
-import { GlobalHeader } from "@/components/global-header"
 import { AuthModal } from "@/components/auth/auth-modal"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useAuth } from "@/contexts/auth-context"
@@ -220,7 +219,12 @@ export default function ProductsPage() {
       {/* Espaciado para navegación fija */}
       <div className="pt-16"></div>
 
-      <GlobalHeader title="World 3D - Productos" showBackButton backHref="/" />
+      {/* Header simple */}
+      <div className="bg-black/20 backdrop-blur-md border-b border-white/10 p-4">
+        <div className="container mx-auto">
+          <h1 className="text-2xl font-bold text-white">World 3D - Productos</h1>
+        </div>
+      </div>
 
       {/* Main content */}
       <main className="container mx-auto px-6 py-12">
