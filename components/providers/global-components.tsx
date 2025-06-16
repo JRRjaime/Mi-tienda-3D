@@ -1,14 +1,17 @@
 "use client"
 
-import { memo } from "react"
-import { Toaster } from "@/components/ui/toaster"
+import { OptimizedFooter } from "@/components/layout/optimized-footer"
 import { DualFAB } from "@/components/ui/dual-fab"
+import { Toaster } from "@/components/ui/toaster"
+import { ErrorBoundary } from "@/components/ui/error-boundary"
 
-// Componentes globales optimizados
-export const GlobalComponents = memo(() => (
-  <>
-    <DualFAB />
-    <Toaster />
-  </>
-))
-GlobalComponents.displayName = "GlobalComponents"
+export function GlobalComponents() {
+  return (
+    <ErrorBoundary>
+      {/* Solo componentes globales, SIN HEADER */}
+      <DualFAB />
+      <Toaster />
+      <OptimizedFooter />
+    </ErrorBoundary>
+  )
+}

@@ -5,17 +5,17 @@ import "./globals.css"
 import { AppProviders } from "@/components/providers/app-providers"
 import { GlobalComponents } from "@/components/providers/global-components"
 import { CartIntegration } from "@/components/cart/cart-integration"
-import { GlobalHeader } from "@/components/layout/optimized-global-header"
+import GlobalHeader from "@/components/layout/optimized-global-header"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "PrintVerse - Plataforma de Impresión 3D",
+  title: "World 3D - Plataforma de Impresión 3D",
   description: "La plataforma definitiva para creadores, impresores y entusiastas de la impresión 3D",
   keywords: "modelos 3D, impresión 3D, marketplace, STL, OBJ, colaboración",
-  authors: [{ name: "PrintVerse Team" }],
+  authors: [{ name: "World 3D Team" }],
   openGraph: {
-    title: "PrintVerse - Plataforma de Impresión 3D",
+    title: "World 3D - Plataforma de Impresión 3D",
     description: "La plataforma definitiva para creadores, impresores y entusiastas de la impresión 3D",
     type: "website",
   },
@@ -31,8 +31,9 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <body className={inter.className}>
         <AppProviders>
-          {children}
+          {/* Solo UN header */}
           <GlobalHeader />
+          {children}
           <GlobalComponents />
           <CartIntegration />
         </AppProviders>

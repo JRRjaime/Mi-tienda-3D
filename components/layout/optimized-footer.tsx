@@ -207,7 +207,7 @@ export function OptimizedFooter() {
           </div>
         </div>
 
-        {/* Bottom Section */}
+        {/* Bottom Section - SIN "MI TIENDA" */}
         <div className="border-t border-blue-200/50 dark:border-slate-700/50 pt-8 mt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 text-sm">

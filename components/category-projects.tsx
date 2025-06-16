@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
@@ -20,14 +19,15 @@ const currentUser = {
   profileTypes: ["creador", "usuario"],
 }
 
-// Datos expandidos de proyectos con imágenes reales
+// DATOS COMPLETOS PARA TODAS LAS CATEGORÍAS - TEST COMPLETO
 const allProjects = [
+  // FIGURAS DE ACCIÓN
   {
     id: 1,
     title: "Figura de Dragon Ball Z - Goku Super Saiyan",
     description: "Figura coleccionable de Goku en pose de combate, impresa en PLA con detalles pintados a mano",
     image: "/images/goku-figure.png",
-    author: "Carlos Mendez", // Este es del usuario actual
+    author: "Carlos Mendez",
     authorAvatar: "/placeholder.svg?height=40&width=40",
     likes: 234,
     comments: 45,
@@ -86,49 +86,52 @@ const allProjects = [
     status: "published",
     isOwner: false,
   },
+
+  // HOGAR Y ORGANIZACIÓN
   {
     id: 4,
-    title: "Modelo 3D Decorativo - Jarrón Geométrico",
-    description: "Elegante jarrón con diseño geométrico moderno para decoración",
-    image: "/images/geometric-vase.png",
-    author: "Carlos Mendez", // Otro modelo del usuario actual
+    title: "Organizador de Escritorio Modular",
+    description: "Sistema modular de organización para escritorio con compartimentos personalizables",
+    image: "/images/desk-organizer.png",
+    author: "Sofia Martinez",
     authorAvatar: "/placeholder.svg?height=40&width=40",
-    likes: 156,
-    comments: 28,
-    downloads: 890,
-    rating: 4.7,
-    views: 3400,
-    tags: ["Decoración", "Geométrico", "Jarrón", "Moderno"],
+    likes: 312,
+    comments: 67,
+    downloads: 1500,
+    rating: 4.6,
+    views: 6800,
+    tags: ["Hogar", "Organización", "Modular", "Escritorio"],
     difficulty: "Fácil",
     printTime: "3 horas",
     material: "PLA",
-    price: 8.5,
-    category: "modelos-decorativos",
-    status: "published",
-    earnings: 75.65,
-    isOwner: true,
-  },
-  {
-    id: 5,
-    title: "Lámpara Decorativa Moderna",
-    description: "Lámpara con diseño contemporáneo y patrones únicos de luz",
-    image: "/images/decorative-lamp.png",
-    author: "Laura Vega",
-    authorAvatar: "/placeholder.svg?height=40&width=40",
-    likes: 298,
-    comments: 41,
-    downloads: 723,
-    rating: 4.8,
-    views: 4500,
-    tags: ["Lámpara", "Decoración", "Moderno", "Iluminación"],
-    difficulty: "Intermedio",
-    printTime: "5 horas",
-    material: "PLA",
-    price: 14.99,
-    category: "modelos-decorativos",
+    price: 6.99,
+    category: "hogar-organizacion",
     status: "published",
     isOwner: false,
   },
+  {
+    id: 5,
+    title: "Soporte para Teléfono Ajustable",
+    description: "Soporte ergonómico y ajustable para dispositivos móviles",
+    image: "/images/phone-stand.png",
+    author: "David Chen",
+    authorAvatar: "/placeholder.svg?height=40&width=40",
+    likes: 445,
+    comments: 89,
+    downloads: 1890,
+    rating: 4.7,
+    views: 7200,
+    tags: ["Soporte", "Teléfono", "Ajustable", "Ergonómico"],
+    difficulty: "Fácil",
+    printTime: "2 horas",
+    material: "PLA",
+    price: 4.99,
+    category: "hogar-organizacion",
+    status: "published",
+    isOwner: false,
+  },
+
+  // PROTOTIPOS INDUSTRIALES
   {
     id: 6,
     title: "Engranaje Industrial Personalizado",
@@ -173,48 +176,30 @@ const allProjects = [
   },
   {
     id: 8,
-    title: "Organizador de Escritorio Modular",
-    description: "Sistema modular de organización para escritorio con compartimentos personalizables",
-    image: "/images/desk-organizer.png",
-    author: "Sofia Martinez",
+    title: "Prototipo de Drone Avanzado",
+    description: "Modelo de drone personalizado para pruebas aerodinámicas",
+    image: "/images/drone-prototype.png",
+    author: "Carlos Mendez",
     authorAvatar: "/placeholder.svg?height=40&width=40",
-    likes: 312,
-    comments: 67,
-    downloads: 1500,
-    rating: 4.6,
-    views: 6800,
-    tags: ["Hogar", "Organización", "Modular", "Escritorio"],
-    difficulty: "Fácil",
-    printTime: "3 horas",
-    material: "PLA",
-    price: 6.99,
-    category: "hogar-organizacion",
+    likes: 12,
+    comments: 3,
+    downloads: 45,
+    rating: 4.2,
+    views: 145,
+    tags: ["Drone", "Prototipo", "Aerodinámico", "Tecnología"],
+    difficulty: "Avanzado",
+    printTime: "6 horas",
+    material: "PETG",
+    price: 22.99,
+    category: "prototipos-industriales",
     status: "published",
-    isOwner: false,
+    earnings: 0,
+    isOwner: true,
   },
+
+  // JOYERÍA Y ACCESORIOS
   {
     id: 9,
-    title: "Soporte para Teléfono Ajustable",
-    description: "Soporte ergonómico y ajustable para dispositivos móviles",
-    image: "/images/phone-stand.png",
-    author: "David Chen",
-    authorAvatar: "/placeholder.svg?height=40&width=40",
-    likes: 445,
-    comments: 89,
-    downloads: 1890,
-    rating: 4.7,
-    views: 7200,
-    tags: ["Soporte", "Teléfono", "Ajustable", "Ergonómico"],
-    difficulty: "Fácil",
-    printTime: "2 horas",
-    material: "PLA",
-    price: 4.99,
-    category: "hogar-organizacion",
-    status: "published",
-    isOwner: false,
-  },
-  {
-    id: 10,
     title: "Anillo de Compromiso Personalizado",
     description: "Elegante anillo con diseño personalizable y grabado opcional",
     image: "/images/custom-ring.png",
@@ -235,7 +220,7 @@ const allProjects = [
     isOwner: false,
   },
   {
-    id: 11,
+    id: 10,
     title: "Colgante Geométrico Elegante",
     description: "Colgante con diseño geométrico moderno para uso diario",
     image: "/images/pendant-jewelry.png",
@@ -255,27 +240,142 @@ const allProjects = [
     status: "published",
     isOwner: false,
   },
+
+  // MODELOS DECORATIVOS
+  {
+    id: 11,
+    title: "Jarrón Geométrico Moderno",
+    description: "Elegante jarrón con diseño geométrico moderno para decoración",
+    image: "/images/geometric-vase.png",
+    author: "Carlos Mendez",
+    authorAvatar: "/placeholder.svg?height=40&width=40",
+    likes: 156,
+    comments: 28,
+    downloads: 890,
+    rating: 4.7,
+    views: 3400,
+    tags: ["Decoración", "Geométrico", "Jarrón", "Moderno"],
+    difficulty: "Fácil",
+    printTime: "3 horas",
+    material: "PLA",
+    price: 8.5,
+    category: "modelos-decorativos",
+    status: "published",
+    earnings: 75.65,
+    isOwner: true,
+  },
   {
     id: 12,
-    title: "Prototipo de Drone - En Revisión",
-    description: "Modelo de drone personalizado para pruebas aerodinámicas",
-    image: "/images/drone-prototype.png",
-    author: "Carlos Mendez", // Modelo pendiente del usuario actual
+    title: "Lámpara Decorativa Moderna",
+    description: "Lámpara con diseño contemporáneo y patrones únicos de luz",
+    image: "/images/decorative-lamp.png",
+    author: "Laura Vega",
     authorAvatar: "/placeholder.svg?height=40&width=40",
-    likes: 12,
-    comments: 3,
-    downloads: 0,
-    rating: 0,
-    views: 45,
-    tags: ["Drone", "Prototipo", "Aerodinámico", "Tecnología"],
+    likes: 298,
+    comments: 41,
+    downloads: 723,
+    rating: 4.8,
+    views: 4500,
+    tags: ["Lámpara", "Decoración", "Moderno", "Iluminación"],
+    difficulty: "Intermedio",
+    printTime: "5 horas",
+    material: "PLA",
+    price: 14.99,
+    category: "modelos-decorativos",
+    status: "published",
+    isOwner: false,
+  },
+
+  // ARTE Y DISEÑO
+  {
+    id: 13,
+    title: "Escultura Abstracta Moderna",
+    description: "Pieza de arte abstracto para decoración contemporánea",
+    image: "/images/3d-art.png",
+    author: "Artista Digital",
+    authorAvatar: "/placeholder.svg?height=40&width=40",
+    likes: 189,
+    comments: 23,
+    downloads: 345,
+    rating: 4.5,
+    views: 2100,
+    tags: ["Arte", "Abstracto", "Escultura", "Moderno"],
+    difficulty: "Intermedio",
+    printTime: "4 horas",
+    material: "PLA",
+    price: 16.99,
+    category: "arte-diseno",
+    status: "published",
+    isOwner: false,
+  },
+
+  // MÉDICO
+  {
+    id: 14,
+    title: "Modelo Anatómico Educativo",
+    description: "Modelo anatómico detallado para educación médica",
+    image: "/images/3d-medical.png",
+    author: "Dr. Medical",
+    authorAvatar: "/placeholder.svg?height=40&width=40",
+    likes: 234,
+    comments: 45,
+    downloads: 567,
+    rating: 4.9,
+    views: 3400,
+    tags: ["Médico", "Anatomía", "Educativo", "Profesional"],
     difficulty: "Avanzado",
-    printTime: "6 horas",
-    material: "PETG",
-    price: 22.99,
-    category: "prototipos-industriales",
-    status: "pending",
-    earnings: 0,
-    isOwner: true,
+    printTime: "8 horas",
+    material: "PLA",
+    price: 29.99,
+    category: "medico",
+    status: "published",
+    isOwner: false,
+  },
+
+  // AUTOMOTRIZ
+  {
+    id: 15,
+    title: "Pieza de Repuesto Automotriz",
+    description: "Componente de repuesto para vehículos clásicos",
+    image: "/images/3d-automotive.png",
+    author: "Auto Parts Pro",
+    authorAvatar: "/placeholder.svg?height=40&width=40",
+    likes: 123,
+    comments: 34,
+    downloads: 234,
+    rating: 4.7,
+    views: 1800,
+    tags: ["Automotriz", "Repuesto", "Clásico", "Funcional"],
+    difficulty: "Avanzado",
+    printTime: "5 horas",
+    material: "ABS",
+    price: 19.99,
+    category: "automotriz",
+    status: "published",
+    isOwner: false,
+  },
+
+  // EDUCATIVO
+  {
+    id: 16,
+    title: "Modelo Educativo de Moléculas",
+    description: "Set de moléculas para enseñanza de química",
+    image: "/images/3d-prototype.png",
+    author: "Profesor Ciencias",
+    authorAvatar: "/placeholder.svg?height=40&width=40",
+    likes: 167,
+    comments: 28,
+    downloads: 445,
+    rating: 4.8,
+    views: 2600,
+    tags: ["Educativo", "Química", "Moléculas", "Enseñanza"],
+    difficulty: "Fácil",
+    printTime: "2 horas",
+    material: "PLA",
+    price: 9.99,
+    category: "educativo",
+    status: "published",
+    isOwner: false,
   },
 ]
 
@@ -333,43 +433,14 @@ export function CategoryProjects({ categoria }: CategoryProjectsProps) {
 
   const myModelsCount = allProjects.filter((project) => project.category === categoria && project.isOwner).length
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "published":
-        return <Badge className="bg-green-500">Publicado</Badge>
-      case "pending":
-        return <Badge className="bg-yellow-500">En Revisión</Badge>
-      case "rejected":
-        return <Badge className="bg-red-500">Rechazado</Badge>
-      default:
-        return <Badge variant="secondary">Borrador</Badge>
-    }
-  }
-
-  const handleBuyProduct = (project: any) => {
-    const cartItem = {
-      id: project.id.toString(),
-      name: project.title,
-      description: project.description,
-      price: project.price,
-      image: project.image,
-      creatorName: project.author,
-      creatorId: project.author.toLowerCase().replace(" ", ""),
-      category: project.category,
-      tags: project.tags,
-      type: "download" as const,
-      downloadFormat: ["STL", "OBJ", "3MF"],
-    }
-
-    addItem(cartItem)
-    toast({
-      title: "¡Producto añadido! 🎉",
-      description: `${project.title} se ha añadido al carrito`,
-    })
-  }
-
   return (
     <div className="space-y-8">
+      {/* Header de categoría con estadísticas */}
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold text-white mb-4">{filteredProjects.length} modelos encontrados</h2>
+        <p className="text-gray-400">Explora nuestra colección de modelos 3D de alta calidad</p>
+      </div>
+
       {/* Barra de búsqueda local */}
       <div className="flex flex-col md:flex-row gap-4">
         <div className="flex-1 relative">
