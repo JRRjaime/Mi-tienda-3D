@@ -2,23 +2,21 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
-import { AuthProvider } from "@/contexts/auth-context"
-import { CartProvider } from "@/contexts/cart-context"
-import { FollowProvider } from "@/contexts/follow-context"
-import { IntegrationProvider } from "@/contexts/integration-context"
-import { WalletProvider } from "@/contexts/wallet-context"
-import { PlatformDataProvider } from "@/contexts/platform-data-context"
-import { CollaborationProvider } from "@/contexts/collaboration-context"
-import { StatsProvider } from "@/contexts/stats-context"
-import { Toaster } from "@/components/ui/toaster"
-import { ChatSystem } from "@/components/chat/chat-system"
+import { AppProviders } from "@/components/providers/app-providers"
+import { GlobalComponents } from "@/components/providers/global-components"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "PrintVerse - Plataforma de Impresión 3D",
   description: "La plataforma definitiva para creadores, impresores y entusiastas de la impresión 3D",
+  keywords: "modelos 3D, impresión 3D, marketplace, STL, OBJ, colaboración",
+  authors: [{ name: "PrintVerse Team" }],
+  openGraph: {
+    title: "PrintVerse - Plataforma de Impresión 3D",
+    description: "La plataforma definitiva para creadores, impresores y entusiastas de la impresión 3D",
+    type: "website",
+  },
     generator: 'v0.dev'
 }
 
@@ -28,29 +26,12 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="es" suppressHydrationWarning>
       <body className={inter.className}>
-        <AuthProvider>
-          <PlatformDataProvider>
-            <WalletProvider>
-              <IntegrationProvider>
-                <FollowProvider>
-                  <CartProvider>
-                    <CollaborationProvider>
-                      <StatsProvider>
-                        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-                          {children}
-                          <ChatSystem />
-                          <Toaster />
-                        </ThemeProvider>
-                      </StatsProvider>
-                    </CollaborationProvider>
-                  </CartProvider>
-                </FollowProvider>
-              </IntegrationProvider>
-            </WalletProvider>
-          </PlatformDataProvider>
-        </AuthProvider>
+        <AppProviders>
+          {children}
+          <GlobalComponents />
+        </AppProviders>
       </body>
     </html>
   )

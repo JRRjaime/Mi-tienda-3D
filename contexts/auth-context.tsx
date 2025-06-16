@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, useMemo, useCallback, type ReactNode } from "react"
 import { useToast } from "@/components/ui/use-toast"
 
 // Tipos para el usuario
@@ -294,9 +294,418 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [supabase, setSupabase] = useState<any>(null)
   const { toast } = useToast()
 
-  const isSupabaseEnabled = isSupabaseConfigured()
+  const isSupabaseEnabled = useMemo(() => isSupabaseConfigured(), [])
 
-  // Inicializar Supabase solo si está configurado correctamente
+  // Memoizar funciones para evitar re-renders
+  const login = useCallback(
+    async (email: string, password: string): Promise<boolean> => {
+      setIsLoading(true)
+
+      try {
+        if (isSupabaseEnabled && supabase) {
+          console.log("🔐 Attempting Supabase login...")
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          })
+
+          if (error) {
+            console.error("❌ Supabase login error:", error.message)
+
+            if (error.message.includes("Invalid API key")) {
+              setSupabase(null)
+              console.log("🧪 Switching to demo mode due to login API error")
+              return await loginWithMockData(email, password)
+            }
+
+            toast({
+              title: "Error de inicio de sesión",
+              description:
+                error.message === "Invalid login credentials" ? "Email o contraseña incorrectos" : error.message,
+              variant: "destructive",
+            })
+            setIsLoading(false)
+            return false
+          }
+
+          if (data.user) {
+            console.log("✅ Supabase login successful")
+            toast({
+              title: "Sesión iniciada",
+              description: `Bienvenido de nuevo`,
+            })
+            setIsLoading(false)
+            return true
+          }
+        } else {
+          console.log("🧪 Using demo login...")
+          return await loginWithMockData(email, password)
+        }
+
+        setIsLoading(false)
+        return false
+      } catch (error: any) {
+        console.error("❌ Login error:", error.message)
+
+        if (error.message?.includes("Invalid API key")) {
+          setSupabase(null)
+          console.log("🧪 Switching to demo mode due to catch API error")
+          return await loginWithMockData(email, password)
+        }
+
+        toast({
+          title: "Error de conexión",
+          description: "No se pudo conectar con el servidor. Intenta de nuevo.",
+          variant: "destructive",
+        })
+        setIsLoading(false)
+        return false
+      }
+    },
+    [isSupabaseEnabled, supabase, toast],
+  )
+
+  const loginWithMockData = useCallback(
+    async (email: string, password: string): Promise<boolean> => {
+      console.log("🧪 Attempting demo login...")
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      const foundUser = MOCK_USERS.find((u) => u.email === email && u.password === password)
+
+      if (foundUser) {
+        const { password: _, ...userWithoutPassword } = foundUser
+        setUser(userWithoutPassword)
+        localStorage.setItem("currentUser", JSON.stringify(userWithoutPassword))
+        toast({
+          title: "Sesión iniciada",
+          description: `Bienvenido de nuevo, ${userWithoutPassword.name}`,
+        })
+        console.log("✅ Demo login successful")
+        setIsLoading(false)
+        return true
+      } else {
+        toast({
+          title: "Error de inicio de sesión",
+          description: "Email o contraseña incorrectos",
+          variant: "destructive",
+        })
+        console.log("❌ Demo login failed - invalid credentials")
+        setIsLoading(false)
+        return false
+      }
+    },
+    [toast],
+  )
+
+  const loginDemo = useCallback(async (): Promise<boolean> => {
+    setIsLoading(true)
+    console.log("🎭 Creating demo user...")
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+
+      const demoUser = generateRandomUser()
+      const { password: _, ...userWithoutPassword } = demoUser
+      setUser(userWithoutPassword)
+      localStorage.setItem("currentUser", JSON.stringify(userWithoutPassword))
+
+      toast({
+        title: "¡Cuenta demo creada!",
+        description: `¡Bienvenido ${userWithoutPassword.name}! Redirigiendo...`,
+        duration: 3000,
+      })
+
+      console.log("✅ Demo user created successfully")
+      setIsLoading(false)
+      return true
+    } catch (error) {
+      console.error("❌ Demo login error:", error)
+      toast({
+        title: "Error",
+        description: "No se pudo crear la cuenta demo. Intenta de nuevo.",
+        variant: "destructive",
+      })
+      setIsLoading(false)
+      return false
+    }
+  }, [toast])
+
+  const register = useCallback(
+    async (name: string, email: string, password: string, role: "user" | "creator" | "printer"): Promise<boolean> => {
+      setIsLoading(true)
+
+      try {
+        if (isSupabaseEnabled && supabase) {
+          console.log("📝 Attempting Supabase registration...")
+          const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: {
+                name,
+                role,
+              },
+            },
+          })
+
+          if (error) {
+            console.error("❌ Supabase register error:", error.message)
+
+            if (error.message.includes("Invalid API key")) {
+              setSupabase(null)
+              console.log("🧪 Switching to demo mode due to register API error")
+              return await registerWithMockData(name, email, password, role)
+            }
+
+            toast({
+              title: "Error de registro",
+              description: error.message === "User already registered" ? "Este email ya está en uso" : error.message,
+              variant: "destructive",
+            })
+            setIsLoading(false)
+            return false
+          }
+
+          if (data.user) {
+            console.log("✅ Supabase registration successful")
+            const profileData = generateCleanProfile(role)
+
+            try {
+              const { error: profileError } = await supabase.from("profiles").insert({
+                id: data.user.id,
+                name,
+                email,
+                role,
+                profile_configured: true,
+                interests: profileData.interests,
+                preferences: {
+                  notifications: true,
+                  newsletter: role !== "printer",
+                  publicProfile: role !== "user",
+                },
+                stats: profileData.stats,
+              })
+
+              if (profileError) {
+                console.warn("⚠️ Error creating profile:", profileError.message)
+              } else {
+                console.log("✅ Profile created successfully")
+              }
+            } catch (profileError) {
+              console.warn("⚠️ Profile creation failed:", profileError)
+            }
+
+            toast({
+              title: "Registro exitoso",
+              description: `¡Bienvenido ${name}! Revisa tu email para confirmar tu cuenta.`,
+            })
+
+            setIsLoading(false)
+            return true
+          }
+        } else {
+          console.log("🧪 Using demo registration...")
+          return await registerWithMockData(name, email, password, role)
+        }
+
+        setIsLoading(false)
+        return false
+      } catch (error: any) {
+        console.error("❌ Register error:", error.message)
+
+        if (error.message?.includes("Invalid API key")) {
+          setSupabase(null)
+          console.log("🧪 Switching to demo mode due to catch register API error")
+          return await registerWithMockData(name, email, password, role)
+        }
+
+        toast({
+          title: "Error de conexión",
+          description: "No se pudo conectar con el servidor. Intenta de nuevo.",
+          variant: "destructive",
+        })
+        setIsLoading(false)
+        return false
+      }
+    },
+    [isSupabaseEnabled, supabase, toast],
+  )
+
+  const registerWithMockData = useCallback(
+    async (name: string, email: string, password: string, role: "user" | "creator" | "printer"): Promise<boolean> => {
+      console.log("🧪 Attempting demo registration...")
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+
+      if (MOCK_USERS.some((u) => u.email === email)) {
+        toast({
+          title: "Error de registro",
+          description: "Este email ya está en uso",
+          variant: "destructive",
+        })
+        console.log("❌ Demo registration failed - email exists")
+        setIsLoading(false)
+        return false
+      }
+
+      const profileData = generateCleanProfile(role)
+
+      const newUser = {
+        id: `${Date.now()}`,
+        name,
+        email,
+        password,
+        avatar: `/placeholder.svg?height=40&width=40&query=${name
+          .split(" ")
+          .map((n) => n[0])
+          .join("")}`,
+        role,
+        createdAt: new Date().toISOString(),
+        profileConfigured: true,
+        interests: profileData.interests,
+        preferences: {
+          notifications: true,
+          newsletter: role !== "printer",
+          publicProfile: role !== "user",
+        },
+        stats: profileData.stats,
+      }
+
+      const { password: _, ...userWithoutPassword } = newUser
+      setUser(userWithoutPassword)
+      localStorage.setItem("currentUser", JSON.stringify(userWithoutPassword))
+
+      toast({
+        title: "Registro exitoso",
+        description: `¡Bienvenido ${name}! Configurando tu experiencia...`,
+      })
+
+      console.log("✅ Demo registration successful")
+      setIsLoading(false)
+      return true
+    },
+    [toast],
+  )
+
+  const logout = useCallback(async () => {
+    try {
+      console.log("🚪 Iniciando proceso de logout...")
+
+      // Marcar que estamos haciendo logout
+      sessionStorage.setItem("isLoggingOut", "true")
+
+      // PRIMERO: Resetear el estado del usuario inmediatamente
+      setUser(null)
+
+      // SEGUNDO: Limpiar completamente TODOS los datos de almacenamiento
+      console.log("🧹 Limpiando todos los datos de almacenamiento...")
+
+      // Limpiar localStorage completamente
+      const keysToRemove = ["currentUser", "supabase.auth.token", "sb-auth-token", "supabase-auth-token"]
+
+      // Buscar y eliminar todas las claves relacionadas con Supabase
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i)
+        if (key && (key.includes("supabase") || key.includes("sb-") || key === "currentUser")) {
+          localStorage.removeItem(key)
+        }
+      }
+
+      // Limpiar sessionStorage completamente
+      sessionStorage.clear()
+
+      // TERCERO: Si hay Supabase, cerrar sesión
+      if (isSupabaseEnabled && supabase) {
+        console.log("👋 Cerrando sesión en Supabase...")
+        try {
+          await supabase.auth.signOut()
+        } catch (supabaseError) {
+          console.warn("⚠️ Error al cerrar sesión en Supabase:", supabaseError)
+        }
+      }
+
+      // CUARTO: Mostrar confirmación
+      toast({
+        title: "Sesión cerrada",
+        description: "Has cerrado sesión correctamente",
+      })
+
+      // QUINTO: Redirigir sin recargar (para evitar que useEffect restaure el usuario)
+      console.log("🔄 Redirigiendo a página principal...")
+      window.location.replace("/")
+
+      console.log("✅ Logout completado")
+    } catch (error) {
+      console.error("❌ Error durante logout:", error)
+
+      // Forzar logout incluso si hay error
+      setUser(null)
+      localStorage.clear()
+      sessionStorage.clear()
+      window.location.replace("/")
+    }
+  }, [isSupabaseEnabled, supabase, toast])
+
+  const updateUserPhoto = useCallback(
+    async (photoUrl: string): Promise<void> => {
+      if (!user) return
+
+      try {
+        if (isSupabaseEnabled && supabase) {
+          const { error } = await supabase.from("profiles").update({ avatar: photoUrl }).eq("id", user.id)
+
+          if (!error) {
+            const updatedUser = { ...user, avatar: photoUrl }
+            setUser(updatedUser)
+            console.log("✅ Photo updated in Supabase")
+          }
+        } else {
+          const updatedUser = { ...user, avatar: photoUrl }
+          setUser(updatedUser)
+          localStorage.setItem("currentUser", JSON.stringify(updatedUser))
+          console.log("✅ Photo updated in localStorage")
+        }
+      } catch (error) {
+        console.error("❌ Update photo error:", error)
+      }
+    },
+    [user, isSupabaseEnabled, supabase],
+  )
+
+  const updateUserStats = useCallback(
+    async (newStats: Partial<User["stats"]>) => {
+      if (!user) return
+
+      try {
+        const updatedStats = { ...user.stats, ...newStats }
+
+        if (isSupabaseEnabled && supabase) {
+          const { error } = await supabase.from("profiles").update({ stats: updatedStats }).eq("id", user.id)
+
+          if (!error) {
+            const updatedUser = {
+              ...user,
+              stats: updatedStats,
+            }
+            setUser(updatedUser)
+            console.log("✅ Stats updated in Supabase")
+          }
+        } else {
+          const updatedUser = {
+            ...user,
+            stats: updatedStats,
+          }
+          setUser(updatedUser)
+          localStorage.setItem("currentUser", JSON.stringify(updatedUser))
+          console.log("✅ Stats updated in localStorage")
+        }
+      } catch (error) {
+        console.error("❌ Update stats error:", error)
+      }
+    },
+    [user, isSupabaseEnabled, supabase],
+  )
+
+  // Inicialización optimizada
   useEffect(() => {
     const initSupabase = async () => {
       if (isSupabaseEnabled) {
@@ -553,435 +962,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [isSupabaseEnabled, supabase])
 
-  // Función de inicio de sesión
-  const login = async (email: string, password: string): Promise<boolean> => {
-    setIsLoading(true)
-
-    try {
-      if (isSupabaseEnabled && supabase) {
-        console.log("🔐 Attempting Supabase login...")
-        // Usar Supabase Auth
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
-
-        if (error) {
-          console.error("❌ Supabase login error:", error.message)
-
-          // Si hay error de API key, cambiar a modo demo
-          if (error.message.includes("Invalid API key")) {
-            setSupabase(null)
-            console.log("🧪 Switching to demo mode due to login API error")
-            // Intentar login en modo demo
-            return await loginWithMockData(email, password)
-          }
-
-          toast({
-            title: "Error de inicio de sesión",
-            description:
-              error.message === "Invalid login credentials" ? "Email o contraseña incorrectos" : error.message,
-            variant: "destructive",
-          })
-          setIsLoading(false)
-          return false
-        }
-
-        if (data.user) {
-          console.log("✅ Supabase login successful")
-          toast({
-            title: "Sesión iniciada",
-            description: `Bienvenido de nuevo`,
-          })
-          setIsLoading(false)
-          return true
-        }
-      } else {
-        console.log("🧪 Using demo login...")
-        return await loginWithMockData(email, password)
-      }
-
-      setIsLoading(false)
-      return false
-    } catch (error: any) {
-      console.error("❌ Login error:", error.message)
-
-      // Si hay error de API key, cambiar a modo demo
-      if (error.message?.includes("Invalid API key")) {
-        setSupabase(null)
-        console.log("🧪 Switching to demo mode due to catch API error")
-        return await loginWithMockData(email, password)
-      }
-
-      toast({
-        title: "Error de conexión",
-        description: "No se pudo conectar con el servidor. Intenta de nuevo.",
-        variant: "destructive",
-      })
-      setIsLoading(false)
-      return false
-    }
-  }
-
-  // Función auxiliar para login con datos mock
-  const loginWithMockData = async (email: string, password: string): Promise<boolean> => {
-    console.log("🧪 Attempting demo login...")
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    const foundUser = MOCK_USERS.find((u) => u.email === email && u.password === password)
-
-    if (foundUser) {
-      const { password: _, ...userWithoutPassword } = foundUser
-      setUser(userWithoutPassword)
-      localStorage.setItem("currentUser", JSON.stringify(userWithoutPassword))
-      toast({
-        title: "Sesión iniciada",
-        description: `Bienvenido de nuevo, ${userWithoutPassword.name}`,
-      })
-      console.log("✅ Demo login successful")
-      setIsLoading(false)
-      return true
-    } else {
-      toast({
-        title: "Error de inicio de sesión",
-        description: "Email o contraseña incorrectos",
-        variant: "destructive",
-      })
-      console.log("❌ Demo login failed - invalid credentials")
-      setIsLoading(false)
-      return false
-    }
-  }
-
-  // Función de inicio de sesión demo
-  const loginDemo = async (): Promise<boolean> => {
-    setIsLoading(true)
-    console.log("🎭 Creating demo user...")
-
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      const demoUser = generateRandomUser()
-      const { password: _, ...userWithoutPassword } = demoUser
-      setUser(userWithoutPassword)
-      localStorage.setItem("currentUser", JSON.stringify(userWithoutPassword))
-
-      toast({
-        title: "¡Cuenta demo creada!",
-        description: `¡Bienvenido ${userWithoutPassword.name}! Redirigiendo...`,
-        duration: 3000,
-      })
-
-      console.log("✅ Demo user created successfully")
-      setIsLoading(false)
-      return true
-    } catch (error) {
-      console.error("❌ Demo login error:", error)
-      toast({
-        title: "Error",
-        description: "No se pudo crear la cuenta demo. Intenta de nuevo.",
-        variant: "destructive",
-      })
-      setIsLoading(false)
-      return false
-    }
-  }
-
-  // Función de registro
-  const register = async (
-    name: string,
-    email: string,
-    password: string,
-    role: "user" | "creator" | "printer",
-  ): Promise<boolean> => {
-    setIsLoading(true)
-
-    try {
-      if (isSupabaseEnabled && supabase) {
-        console.log("📝 Attempting Supabase registration...")
-        // Usar Supabase Auth
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              name,
-              role,
-            },
-          },
-        })
-
-        if (error) {
-          console.error("❌ Supabase register error:", error.message)
-
-          // Si hay error de API key, cambiar a modo demo
-          if (error.message.includes("Invalid API key")) {
-            setSupabase(null)
-            console.log("🧪 Switching to demo mode due to register API error")
-            return await registerWithMockData(name, email, password, role)
-          }
-
-          toast({
-            title: "Error de registro",
-            description: error.message === "User already registered" ? "Este email ya está en uso" : error.message,
-            variant: "destructive",
-          })
-          setIsLoading(false)
-          return false
-        }
-
-        if (data.user) {
-          console.log("✅ Supabase registration successful")
-          const profileData = generateCleanProfile(role)
-
-          try {
-            const { error: profileError } = await supabase.from("profiles").insert({
-              id: data.user.id,
-              name,
-              email,
-              role,
-              profile_configured: true,
-              interests: profileData.interests,
-              preferences: {
-                notifications: true,
-                newsletter: role !== "printer",
-                publicProfile: role !== "user",
-              },
-              stats: profileData.stats,
-            })
-
-            if (profileError) {
-              console.warn("⚠️ Error creating profile:", profileError.message)
-            } else {
-              console.log("✅ Profile created successfully")
-            }
-          } catch (profileError) {
-            console.warn("⚠️ Profile creation failed:", profileError)
-          }
-
-          toast({
-            title: "Registro exitoso",
-            description: `¡Bienvenido ${name}! Revisa tu email para confirmar tu cuenta.`,
-          })
-
-          setIsLoading(false)
-          return true
-        }
-      } else {
-        console.log("🧪 Using demo registration...")
-        return await registerWithMockData(name, email, password, role)
-      }
-
-      setIsLoading(false)
-      return false
-    } catch (error: any) {
-      console.error("❌ Register error:", error.message)
-
-      // Si hay error de API key, cambiar a modo demo
-      if (error.message?.includes("Invalid API key")) {
-        setSupabase(null)
-        console.log("🧪 Switching to demo mode due to catch register API error")
-        return await registerWithMockData(name, email, password, role)
-      }
-
-      toast({
-        title: "Error de conexión",
-        description: "No se pudo conectar con el servidor. Intenta de nuevo.",
-        variant: "destructive",
-      })
-      setIsLoading(false)
-      return false
-    }
-  }
-
-  // Función auxiliar para registro con datos mock
-  const registerWithMockData = async (
-    name: string,
-    email: string,
-    password: string,
-    role: "user" | "creator" | "printer",
-  ): Promise<boolean> => {
-    console.log("🧪 Attempting demo registration...")
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-
-    if (MOCK_USERS.some((u) => u.email === email)) {
-      toast({
-        title: "Error de registro",
-        description: "Este email ya está en uso",
-        variant: "destructive",
-      })
-      console.log("❌ Demo registration failed - email exists")
-      setIsLoading(false)
-      return false
-    }
-
-    const profileData = generateCleanProfile(role)
-
-    const newUser = {
-      id: `${Date.now()}`,
-      name,
-      email,
-      password,
-      avatar: `/placeholder.svg?height=40&width=40&query=${name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")}`,
-      role,
-      createdAt: new Date().toISOString(),
-      profileConfigured: true,
-      interests: profileData.interests,
-      preferences: {
-        notifications: true,
-        newsletter: role !== "printer",
-        publicProfile: role !== "user",
-      },
-      stats: profileData.stats,
-    }
-
-    const { password: _, ...userWithoutPassword } = newUser
-    setUser(userWithoutPassword)
-    localStorage.setItem("currentUser", JSON.stringify(userWithoutPassword))
-
-    toast({
-      title: "Registro exitoso",
-      description: `¡Bienvenido ${name}! Configurando tu experiencia...`,
-    })
-
-    console.log("✅ Demo registration successful")
-    setIsLoading(false)
-    return true
-  }
-
-  // Función de cierre de sesión
-  const logout = async () => {
-    try {
-      console.log("🚪 Iniciando proceso de logout...")
-
-      // Marcar que estamos haciendo logout
-      sessionStorage.setItem("isLoggingOut", "true")
-
-      // PRIMERO: Resetear el estado del usuario inmediatamente
-      setUser(null)
-
-      // SEGUNDO: Limpiar completamente TODOS los datos de almacenamiento
-      console.log("🧹 Limpiando todos los datos de almacenamiento...")
-
-      // Limpiar localStorage completamente
-      const keysToRemove = ["currentUser", "supabase.auth.token", "sb-auth-token", "supabase-auth-token"]
-
-      // Buscar y eliminar todas las claves relacionadas con Supabase
-      for (let i = localStorage.length - 1; i >= 0; i--) {
-        const key = localStorage.key(i)
-        if (key && (key.includes("supabase") || key.includes("sb-") || key === "currentUser")) {
-          localStorage.removeItem(key)
-        }
-      }
-
-      // Limpiar sessionStorage completamente
-      sessionStorage.clear()
-
-      // TERCERO: Si hay Supabase, cerrar sesión
-      if (isSupabaseEnabled && supabase) {
-        console.log("👋 Cerrando sesión en Supabase...")
-        try {
-          await supabase.auth.signOut()
-        } catch (supabaseError) {
-          console.warn("⚠️ Error al cerrar sesión en Supabase:", supabaseError)
-        }
-      }
-
-      // CUARTO: Mostrar confirmación
-      toast({
-        title: "Sesión cerrada",
-        description: "Has cerrado sesión correctamente",
-      })
-
-      // QUINTO: Redirigir sin recargar (para evitar que useEffect restaure el usuario)
-      console.log("🔄 Redirigiendo a página principal...")
-      window.location.replace("/")
-
-      console.log("✅ Logout completado")
-    } catch (error) {
-      console.error("❌ Error durante logout:", error)
-
-      // Forzar logout incluso si hay error
-      setUser(null)
-      localStorage.clear()
-      sessionStorage.clear()
-      window.location.replace("/")
-    }
-  }
-
-  const updateUserPhoto = async (photoUrl: string): Promise<void> => {
-    if (!user) return
-
-    try {
-      if (isSupabaseEnabled && supabase) {
-        const { error } = await supabase.from("profiles").update({ avatar: photoUrl }).eq("id", user.id)
-
-        if (!error) {
-          const updatedUser = { ...user, avatar: photoUrl }
-          setUser(updatedUser)
-          console.log("✅ Photo updated in Supabase")
-        }
-      } else {
-        const updatedUser = { ...user, avatar: photoUrl }
-        setUser(updatedUser)
-        localStorage.setItem("currentUser", JSON.stringify(updatedUser))
-        console.log("✅ Photo updated in localStorage")
-      }
-    } catch (error) {
-      console.error("❌ Update photo error:", error)
-    }
-  }
-
-  const updateUserStats = async (newStats: Partial<User["stats"]>) => {
-    if (!user) return
-
-    try {
-      const updatedStats = { ...user.stats, ...newStats }
-
-      if (isSupabaseEnabled && supabase) {
-        const { error } = await supabase.from("profiles").update({ stats: updatedStats }).eq("id", user.id)
-
-        if (!error) {
-          const updatedUser = {
-            ...user,
-            stats: updatedStats,
-          }
-          setUser(updatedUser)
-          console.log("✅ Stats updated in Supabase")
-        }
-      } else {
-        const updatedUser = {
-          ...user,
-          stats: updatedStats,
-        }
-        setUser(updatedUser)
-        localStorage.setItem("currentUser", JSON.stringify(updatedUser))
-        console.log("✅ Stats updated in localStorage")
-      }
-    } catch (error) {
-      console.error("❌ Update stats error:", error)
-    }
-  }
-
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isLoading,
-        isAuthenticated: !!user,
-        isSupabaseEnabled: isSupabaseEnabled && !!supabase,
-        login,
-        loginDemo,
-        register,
-        logout,
-        updateUserPhoto,
-        updateUserStats,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+  // Memoizar el valor del contexto
+  const contextValue = useMemo(
+    () => ({
+      user,
+      isLoading,
+      isAuthenticated: !!user,
+      isSupabaseEnabled: isSupabaseEnabled && !!supabase,
+      login,
+      loginDemo,
+      register,
+      logout,
+      updateUserPhoto,
+      updateUserStats,
+    }),
+    [
+      user,
+      isLoading,
+      isSupabaseEnabled,
+      supabase,
+      login,
+      loginDemo,
+      register,
+      logout,
+      updateUserPhoto,
+      updateUserStats,
+    ],
   )
+
+  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
 }
