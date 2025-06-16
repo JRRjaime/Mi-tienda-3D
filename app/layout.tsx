@@ -5,6 +5,7 @@ import "./globals.css"
 import { AppProviders } from "@/components/providers/app-providers"
 import { GlobalComponents } from "@/components/providers/global-components"
 import { CartIntegration } from "@/components/cart/cart-integration"
+import { GlobalHeader } from "@/components/layout/optimized-global-header"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -31,6 +32,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <AppProviders>
           {children}
+          <GlobalHeader />
           <GlobalComponents />
           <CartIntegration />
         </AppProviders>
