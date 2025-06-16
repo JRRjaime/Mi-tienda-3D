@@ -1,17 +1,36 @@
 import Stripe from "stripe"
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error("STRIPE_SECRET_KEY is not set")
+// Función para verificar si Stripe está configurado
+export const isStripeConfigured = () => {
+  return !!(process.env.STRIPE_SECRET_KEY && process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
 }
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2024-06-20",
-  typescript: true,
-})
+// Inicialización lazy de Stripe
+let stripeInstance: Stripe | null = null
+
+export const getStripe = (): Stripe | null => {
+  if (!isStripeConfigured()) {
+    console.warn("Stripe is not configured. Please set STRIPE_SECRET_KEY and NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY")
+    return null
+  }
+
+  if (!stripeInstance) {
+    stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+      apiVersion: "2024-06-20",
+      typescript: true,
+    })
+  }
+
+  return stripeInstance
+}
+
+// Export para compatibilidad
+export const stripe = getStripe()
 
 export const getStripePublishableKey = () => {
   if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
-    throw new Error("NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not set")
+    console.warn("NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not set")
+    return null
   }
   return process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 }

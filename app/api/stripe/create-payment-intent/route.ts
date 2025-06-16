@@ -1,8 +1,18 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { stripe } from "@/lib/stripe"
+import { getStripe, isStripeConfigured } from "@/lib/stripe"
 
 export async function POST(request: NextRequest) {
   try {
+    // Verificar si Stripe está configurado
+    if (!isStripeConfigured()) {
+      return NextResponse.json({ error: "Stripe is not configured. Please contact support." }, { status: 503 })
+    }
+
+    const stripe = getStripe()
+    if (!stripe) {
+      return NextResponse.json({ error: "Payment service unavailable" }, { status: 503 })
+    }
+
     const { amount, currency = "usd", metadata = {} } = await request.json()
 
     // Validar cantidad mínima (50 centavos)

@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   Dialog,
   DialogContent,
@@ -31,11 +32,14 @@ import {
   Send,
   CheckCircle,
   AlertTriangle,
-  X,
+  Info,
+  DollarSign,
+  ArrowRight,
 } from "lucide-react"
 import { useWallet } from "@/contexts/wallet-context"
 import { useToast } from "@/hooks/use-toast"
 import { EnhancedCreditCardForm } from "@/components/payment/enhanced-credit-card-form"
+import { isStripeConfigured } from "@/lib/stripe"
 
 export function AdvancedWallet() {
   const {
@@ -60,6 +64,9 @@ export function AdvancedWallet() {
   const [problemReason, setProblemReason] = useState("")
   const [selectedTransaction, setSelectedTransaction] = useState<string | null>(null)
 
+  // Verificar configuración de Stripe
+  const stripeConfigured = isStripeConfigured()
+
   // Filtrar transacciones por tipo
   const pendingTransactions = transactions.filter((tx) => tx.status === "pending" || tx.status === "blocked")
   const completedTransactions = transactions.filter((tx) => tx.status === "completed")
@@ -67,7 +74,7 @@ export function AdvancedWallet() {
   const recentTransactions = transactions.slice(0, 10)
 
   const handleAddFundsSuccess = async (amount: number) => {
-    await addFunds(amount, "stripe")
+    await addFunds(amount, stripeConfigured ? "stripe" : "demo")
   }
 
   const handleWithdraw = async () => {
@@ -168,6 +175,17 @@ export function AdvancedWallet() {
 
   return (
     <div className="space-y-6">
+      {/* Alerta de configuración de Stripe */}
+      {!stripeConfigured && (
+        <Alert className="border-yellow-500/20 bg-yellow-500/10">
+          <Info className="h-4 w-4 text-yellow-500" />
+          <AlertDescription className="text-yellow-200">
+            <strong>Modo Demo:</strong> Stripe no está configurado. Los pagos serán simulados para propósitos de
+            demostración.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Balance Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-r from-green-500 to-emerald-500 border-0">
@@ -233,7 +251,7 @@ export function AdvancedWallet() {
           </div>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-4">
-          {/* Añadir Fondos con Stripe */}
+          {/* Añadir Fondos */}
           <Dialog>
             <DialogTrigger asChild>
               <Button className="bg-gradient-to-r from-green-500 to-emerald-500">
@@ -245,7 +263,8 @@ export function AdvancedWallet() {
               <DialogHeader>
                 <DialogTitle className="text-white">Añadir Fondos</DialogTitle>
                 <DialogDescription className="text-gray-400">
-                  Recarga tu cartera con fondos adicionales usando Stripe
+                  Recarga tu cartera con fondos adicionales
+                  {!stripeConfigured && " (modo demo)"}
                 </DialogDescription>
               </DialogHeader>
               <EnhancedCreditCardForm onSuccess={handleAddFundsSuccess} onCancel={() => {}} />
@@ -265,6 +284,7 @@ export function AdvancedWallet() {
                 <DialogTitle className="text-white">Retirar Fondos</DialogTitle>
                 <DialogDescription className="text-gray-400">
                   Retira dinero de tu cartera a tu cuenta bancaria
+                  {!stripeConfigured && " (modo demo)"}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -311,7 +331,7 @@ export function AdvancedWallet() {
                   disabled={isLoading || !withdrawAmount || !withdrawMethod}
                   className="w-full bg-gradient-to-r from-blue-500 to-purple-500"
                 >
-                  {isLoading ? "Procesando..." : "Retirar Fondos"}
+                  {isLoading ? "Procesando..." : stripeConfigured ? "Retirar Fondos" : "Simular Retiro"}
                 </Button>
               </div>
             </DialogContent>
@@ -330,6 +350,7 @@ export function AdvancedWallet() {
                 <DialogTitle className="text-white">Enviar Pago</DialogTitle>
                 <DialogDescription className="text-gray-400">
                   Envía dinero a otro usuario de forma segura
+                  {!stripeConfigured && " (modo demo)"}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -376,7 +397,7 @@ export function AdvancedWallet() {
                   disabled={isLoading || !paymentAmount || !paymentRecipient || !paymentDescription}
                   className="w-full bg-gradient-to-r from-purple-500 to-pink-500"
                 >
-                  {isLoading ? "Enviando..." : "Enviar Pago"}
+                  {isLoading ? "Enviando..." : stripeConfigured ? "Enviar Pago" : "Simular Envío"}
                 </Button>
               </div>
             </DialogContent>
@@ -406,34 +427,55 @@ export function AdvancedWallet() {
               <CardDescription className="text-gray-300">Últimas transacciones y estado de tu cartera</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {transactions.slice(0, 5).map((transaction) => (
-                  <div
-                    key={transaction.id}
-                    className="flex items-center justify-between p-4 rounded-lg bg-white/5 border border-white/10"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`p-2 rounded-full bg-white/10 ${getTransactionColor(transaction.type, transaction.status)}`}
-                      >
-                        {getTransactionIcon(transaction.type, transaction.status)}
-                      </div>
-                      <div>
-                        <div className="text-white font-medium">{transaction.description}</div>
-                        <div className="text-sm text-gray-400">
-                          {new Date(transaction.date).toLocaleDateString("es-ES")}
+              {transactions.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 p-4 rounded-full mx-auto w-16 h-16 flex items-center justify-center mb-4">
+                    <DollarSign className="h-8 w-8 text-blue-400" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">No tienes transacciones todavía</h3>
+                  <p className="text-gray-400 text-center max-w-md mx-auto mb-6">
+                    Tu historial de transacciones aparecerá aquí cuando realices tu primera operación.
+                  </p>
+                  <Button className="bg-gradient-to-r from-blue-500 to-purple-500">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Añadir Fondos
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {transactions.slice(0, 5).map((transaction) => (
+                    <div
+                      key={transaction.id}
+                      className="flex items-center justify-between p-4 rounded-lg bg-white/5 border border-white/10"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`p-2 rounded-full bg-white/10 ${getTransactionColor(
+                            transaction.type,
+                            transaction.status,
+                          )}`}
+                        >
+                          {getTransactionIcon(transaction.type, transaction.status)}
+                        </div>
+                        <div>
+                          <div className="text-white font-medium">{transaction.description}</div>
+                          <div className="text-sm text-gray-400">
+                            {new Date(transaction.date).toLocaleDateString("es-ES")}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className={`text-lg font-bold ${getTransactionColor(transaction.type, transaction.status)}`}>
-                        ${Math.abs(transaction.amount).toFixed(2)}
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`text-lg font-bold ${getTransactionColor(transaction.type, transaction.status)}`}
+                        >
+                          ${Math.abs(transaction.amount).toFixed(2)}
+                        </div>
+                        {getStatusBadge(transaction.status)}
                       </div>
-                      {getStatusBadge(transaction.status)}
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -445,102 +487,90 @@ export function AdvancedWallet() {
               <CardDescription className="text-gray-300">Pagos que requieren tu atención</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {pendingTransactions.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="text-6xl mb-4">💰</div>
-                    <div className="text-4xl mb-4">🏜️</div>
-                    <h3 className="text-white font-bold text-xl mb-3">¡Cartera Más Limpia que Plato de Pobre! 😅</h3>
-                    <p className="text-gray-400 mb-6 max-w-md mx-auto">
-                      Tu historial está más vacío que mi nevera los domingos... ¡Pero eso significa que estás a punto de
-                      escribir tu primera historia financiera épica! 📈
-                    </p>
+              {pendingTransactions.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-6xl mb-4">💰</div>
+                  <div className="text-4xl mb-4">🏜️</div>
+                  <h3 className="text-white font-bold text-xl mb-3">¡Cartera Más Limpia que Plato de Pobre! 😅</h3>
+                  <p className="text-gray-400 mb-6 max-w-md mx-auto">
+                    No tienes transacciones pendientes. ¡Cuando realices o recibas pagos, aparecerán aquí!
+                  </p>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                      <div className="p-4 bg-green-500/10 rounded-lg border border-green-500/20">
-                        <div className="text-2xl mb-2">💸</div>
-                        <h4 className="text-green-400 font-medium text-sm">Ingresos</h4>
-                        <p className="text-xs text-gray-500">Aquí van a llover los billetes</p>
-                      </div>
-                      <div className="p-4 bg-red-500/10 rounded-lg border border-red-500/20">
-                        <div className="text-2xl mb-2">🛒</div>
-                        <h4 className="text-red-400 font-medium text-sm">Gastos</h4>
-                        <p className="text-xs text-gray-500">Inversiones inteligentes</p>
-                      </div>
-                      <div className="p-4 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
-                        <div className="text-2xl mb-2">⏳</div>
-                        <h4 className="text-yellow-400 font-medium text-sm">Pendientes</h4>
-                        <p className="text-xs text-gray-500">Dinero en camino</p>
-                      </div>
-                      <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                        <div className="text-2xl mb-2">🔒</div>
-                        <h4 className="text-blue-400 font-medium text-sm">Seguros</h4>
-                        <p className="text-xs text-gray-500">Protección total</p>
-                      </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div className="p-4 bg-green-500/10 rounded-lg border border-green-500/20">
+                      <div className="text-2xl mb-2">💸</div>
+                      <h4 className="text-green-400 font-medium text-sm">Ingresos</h4>
+                      <p className="text-xs text-gray-500">Aquí van a llover los billetes</p>
                     </div>
-
-                    <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 p-6 rounded-lg border border-purple-500/30 max-w-lg mx-auto">
-                      <div className="text-3xl mb-3">🎯</div>
-                      <h4 className="text-white font-bold mb-2">¡Tu Primera Transacción Será Histórica! 🏆</h4>
-                      <p className="text-gray-300 text-sm mb-4">
-                        Cada gran fortuna empezó con el primer peso. ¡El tuyo va a ser legendario! ⚡
-                      </p>
-                      <div className="flex flex-wrap gap-2 justify-center">
-                        <Badge variant="outline" className="border-cyan-400/30 text-cyan-400">
-                          <span className="mr-1">💎</span>
-                          100% Real
-                        </Badge>
-                        <Badge variant="outline" className="border-green-400/30 text-green-400">
-                          <span className="mr-1">🔒</span>
-                          Súper Seguro
-                        </Badge>
-                        <Badge variant="outline" className="border-purple-400/30 text-purple-400">
-                          <span className="mr-1">⚡</span>
-                          Súper Rápido
-                        </Badge>
-                      </div>
+                    <div className="p-4 bg-red-500/10 rounded-lg border border-red-500/20">
+                      <div className="text-2xl mb-2">🛒</div>
+                      <h4 className="text-red-400 font-medium text-sm">Gastos</h4>
+                      <p className="text-xs text-gray-500">Inversiones inteligentes</p>
                     </div>
-
-                    <div className="mt-8 text-xs text-gray-500">
-                      <p>
-                        💡 <strong>Tip Pro:</strong> Cada número que veas aquí será 100% auténtico y ganado con tu
-                        esfuerzo 🌟
-                      </p>
+                    <div className="p-4 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
+                      <div className="text-2xl mb-2">⏳</div>
+                      <h4 className="text-yellow-400 font-medium text-sm">Pendientes</h4>
+                      <p className="text-xs text-gray-500">Dinero en camino</p>
+                    </div>
+                    <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                      <div className="text-2xl mb-2">🔒</div>
+                      <h4 className="text-blue-400 font-medium text-sm">Seguros</h4>
+                      <p className="text-xs text-gray-500">Protección total</p>
                     </div>
                   </div>
-                ) : (
-                  pendingTransactions.map((transaction) => (
-                    <div key={transaction.id} className="p-4 rounded-lg bg-white/5 border border-white/10 space-y-3">
-                      <div className="flex items-center justify-between">
+
+                  <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 p-6 rounded-lg border border-purple-500/30 max-w-lg mx-auto">
+                    <div className="text-3xl mb-3">🎯</div>
+                    <h4 className="text-white font-bold mb-2">¡Tu Primera Transacción Será Histórica! 🏆</h4>
+                    <p className="text-gray-300 text-sm mb-4">
+                      Cada gran fortuna empezó con el primer peso. ¡El tuyo va a ser legendario! ⚡
+                    </p>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      <Badge variant="outline" className="border-cyan-400/30 text-cyan-400">
+                        <span className="mr-1">💎</span>
+                        100% Real
+                      </Badge>
+                      <Badge variant="outline" className="border-green-400/30 text-green-400">
+                        <span className="mr-1">🔒</span>
+                        Súper Seguro
+                      </Badge>
+                      <Badge variant="outline" className="border-yellow-400/30 text-yellow-400">
+                        <span className="mr-1">⚡</span>
+                        Rapidísimo
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {pendingTransactions.map((transaction) => (
+                    <div key={transaction.id} className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                      <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-full bg-yellow-500/20 text-yellow-400">
-                            <Clock className="h-4 w-4" />
+                          <div className="p-2 rounded-full bg-yellow-500/20">
+                            <Clock className="h-4 w-4 text-yellow-400" />
                           </div>
                           <div>
                             <div className="text-white font-medium">{transaction.description}</div>
                             <div className="text-sm text-gray-400">
-                              {transaction.relatedUser && `De: ${transaction.relatedUser}`}
+                              {new Date(transaction.date).toLocaleDateString("es-ES")}
                             </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-lg font-bold text-yellow-400">
-                            ${Math.abs(transaction.amount).toFixed(2)}
-                          </div>
-                          {getStatusBadge(transaction.status)}
+                        <div className="text-lg font-bold text-yellow-400">
+                          ${Math.abs(transaction.amount).toFixed(2)}
                         </div>
                       </div>
 
-                      {transaction.type === "pending_income" && (
+                      {transaction.status === "blocked" && (
                         <div className="flex gap-2">
                           <Button
                             size="sm"
-                            onClick={() => confirmPayment(transaction.id)}
-                            disabled={isLoading}
+                            onClick={() => handleConfirmReceived(transaction.id)}
                             className="bg-green-500 hover:bg-green-600"
                           >
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            Confirmar Recepción
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Confirmar Recibido
                           </Button>
                           <Dialog>
                             <DialogTrigger asChild>
@@ -548,8 +578,9 @@ export function AdvancedWallet() {
                                 size="sm"
                                 variant="outline"
                                 className="border-red-400/30 text-red-400 hover:bg-red-400/10"
+                                onClick={() => setSelectedTransaction(transaction.id)}
                               >
-                                <AlertTriangle className="h-4 w-4 mr-2" />
+                                <AlertTriangle className="h-3 w-3 mr-1" />
                                 Reportar Problema
                               </Button>
                             </DialogTrigger>
@@ -570,19 +601,20 @@ export function AdvancedWallet() {
                                 <div className="flex gap-2">
                                   <Button
                                     onClick={() => {
-                                      reportProblem(transaction.id, problemReason)
                                       setProblemReason("")
+                                      setSelectedTransaction(null)
                                     }}
-                                    disabled={isLoading || !problemReason}
+                                    variant="outline"
+                                    className="flex-1 border-white/20 text-white"
+                                  >
+                                    Cancelar
+                                  </Button>
+                                  <Button
+                                    onClick={() => handleReportProblem(transaction.id)}
                                     className="flex-1 bg-red-500 hover:bg-red-600"
                                   >
                                     Reportar
                                   </Button>
-                                  <DialogTrigger asChild>
-                                    <Button variant="outline" className="border-white/20 text-white">
-                                      <X className="h-4 w-4" />
-                                    </Button>
-                                  </DialogTrigger>
                                 </div>
                               </div>
                             </DialogContent>
@@ -590,9 +622,9 @@ export function AdvancedWallet() {
                         </div>
                       )}
                     </div>
-                  ))
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -604,45 +636,53 @@ export function AdvancedWallet() {
               <CardDescription className="text-gray-300">Todas tus transacciones completadas</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {completedTransactions.map((transaction) => (
-                  <div
-                    key={transaction.id}
-                    className="flex items-center justify-between p-4 rounded-lg bg-white/5 border border-white/10"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`p-2 rounded-full bg-white/10 ${getTransactionColor(transaction.type, transaction.status)}`}
-                      >
-                        {getTransactionIcon(transaction.type, transaction.status)}
-                      </div>
-                      <div>
-                        <div className="text-white font-medium">{transaction.description}</div>
-                        <div className="text-sm text-gray-400">
-                          {new Date(transaction.date).toLocaleDateString("es-ES", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </div>
-                        {transaction.relatedUser && (
-                          <div className="text-xs text-gray-500">
-                            {transaction.type === "income" ? "De" : "Para"}: {transaction.relatedUser}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className={`text-lg font-bold ${getTransactionColor(transaction.type, transaction.status)}`}>
-                        {transaction.type === "expense" ? "-" : "+"}${Math.abs(transaction.amount).toFixed(2)}
-                      </div>
-                      {getStatusBadge(transaction.status)}
-                    </div>
+              {completedTransactions.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="bg-gradient-to-r from-gray-500/20 to-slate-500/20 p-4 rounded-full mx-auto w-16 h-16 flex items-center justify-center mb-4">
+                    <ArrowRight className="h-8 w-8 text-gray-400" />
                   </div>
-                ))}
-              </div>
+                  <h3 className="text-xl font-bold text-white mb-2">Historial vacío</h3>
+                  <p className="text-gray-400 text-center max-w-md mx-auto">
+                    Tus transacciones completadas aparecerán aquí para que puedas hacer seguimiento de tu actividad
+                    financiera.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {completedTransactions.map((transaction) => (
+                    <div
+                      key={transaction.id}
+                      className="flex items-center justify-between p-4 rounded-lg bg-white/5 border border-white/10"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`p-2 rounded-full bg-white/10 ${getTransactionColor(
+                            transaction.type,
+                            transaction.status,
+                          )}`}
+                        >
+                          {getTransactionIcon(transaction.type, transaction.status)}
+                        </div>
+                        <div>
+                          <div className="text-white font-medium">{transaction.description}</div>
+                          <div className="text-sm text-gray-400">
+                            {new Date(transaction.date).toLocaleDateString("es-ES")} •{" "}
+                            {transaction.paymentMethod && `${transaction.paymentMethod}`}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`text-lg font-bold ${getTransactionColor(transaction.type, transaction.status)}`}
+                        >
+                          {transaction.amount > 0 ? "+" : ""}${transaction.amount.toFixed(2)}
+                        </div>
+                        {getStatusBadge(transaction.status)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

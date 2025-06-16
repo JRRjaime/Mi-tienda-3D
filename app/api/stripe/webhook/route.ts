@@ -1,14 +1,32 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { stripe } from "@/lib/stripe"
+import { getStripe, isStripeConfigured } from "@/lib/stripe"
 import { headers } from "next/headers"
-
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
 export async function POST(request: NextRequest) {
   try {
+    // Verificar si Stripe está configurado
+    if (!isStripeConfigured()) {
+      return NextResponse.json({ error: "Stripe is not configured" }, { status: 503 })
+    }
+
+    const stripe = getStripe()
+    if (!stripe) {
+      return NextResponse.json({ error: "Payment service unavailable" }, { status: 503 })
+    }
+
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+    if (!webhookSecret) {
+      console.error("STRIPE_WEBHOOK_SECRET is not set")
+      return NextResponse.json({ error: "Webhook secret not configured" }, { status: 500 })
+    }
+
     const body = await request.text()
     const headersList = headers()
-    const signature = headersList.get("stripe-signature")!
+    const signature = headersList.get("stripe-signature")
+
+    if (!signature) {
+      return NextResponse.json({ error: "No signature provided" }, { status: 400 })
+    }
 
     let event: any
 

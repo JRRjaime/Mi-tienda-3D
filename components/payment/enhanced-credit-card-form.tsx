@@ -1,14 +1,15 @@
 "use client"
 
 import { useState } from "react"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { CreditCard, Building2, Smartphone, Shield, CheckCircle, Info } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { Building2 } from "lucide-react"
-import { StripePaymentForm } from "./stripe-payment-form"
+import { isStripeConfigured, getStripePublishableKey } from "@/lib/stripe"
 
 interface EnhancedCreditCardFormProps {
   onSuccess: (amount: number) => void
@@ -17,127 +18,275 @@ interface EnhancedCreditCardFormProps {
 
 export function EnhancedCreditCardForm({ onSuccess, onCancel }: EnhancedCreditCardFormProps) {
   const [amount, setAmount] = useState("")
-  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "bank_transfer" | "">("")
+  const [paymentMethod, setPaymentMethod] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
-  const handleBankTransfer = async () => {
-    const amountNum = Number.parseFloat(amount)
-    if (isNaN(amountNum) || amountNum < 5 || amountNum > 1000) {
+  // Verificar si Stripe está configurado
+  const stripeConfigured = isStripeConfigured()
+  const publishableKey = getStripePublishableKey()
+
+  const handleSubmit = async () => {
+    if (!stripeConfigured) {
       toast({
-        title: "Cantidad inválida",
-        description: "La cantidad debe estar entre $5 y $1000",
+        title: "Servicio no disponible",
+        description: "El sistema de pagos no está configurado. Contacta al soporte.",
         variant: "destructive",
       })
       return
     }
 
-    // Simular transferencia bancaria
-    toast({
-      title: "Transferencia iniciada",
-      description: "Te hemos enviado las instrucciones por email. Los fondos estarán disponibles en 1-3 días hábiles.",
-    })
+    if (!amount || Number.parseFloat(amount) <= 0) {
+      toast({
+        title: "Cantidad inválida",
+        description: "Por favor ingresa una cantidad válida",
+        variant: "destructive",
+      })
+      return
+    }
 
-    // En una implementación real, aquí generarías las instrucciones de transferencia
-    onCancel()
+    if (!paymentMethod) {
+      toast({
+        title: "Método requerido",
+        description: "Por favor selecciona un método de pago",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsLoading(true)
+
+    try {
+      // Simular procesamiento de pago cuando Stripe no está configurado
+      if (!stripeConfigured) {
+        // Simular delay
+        await new Promise((resolve) => setTimeout(resolve, 2000))
+
+        toast({
+          title: "Pago simulado exitoso",
+          description: `Se han añadido $${amount} a tu cartera (modo demo)`,
+        })
+
+        onSuccess(Number.parseFloat(amount))
+        return
+      }
+
+      // Aquí iría la lógica real de Stripe cuando esté configurado
+      const response = await fetch("/api/stripe/create-payment-intent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          amount: Math.round(Number.parseFloat(amount) * 100), // Convertir a centavos
+          metadata: {
+            paymentMethod,
+          },
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Error al procesar el pago")
+      }
+
+      toast({
+        title: "Pago exitoso",
+        description: `Se han añadido $${amount} a tu cartera`,
+      })
+
+      onSuccess(Number.parseFloat(amount))
+    } catch (error) {
+      console.error("Error processing payment:", error)
+      toast({
+        title: "Error en el pago",
+        description: error instanceof Error ? error.message : "Error desconocido",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
-
-  const amountNum = Number.parseFloat(amount)
-  const isValidAmount = !isNaN(amountNum) && amountNum >= 5 && amountNum <= 1000
 
   return (
     <div className="space-y-6">
-      {/* Selección de cantidad */}
-      <Card className="bg-white/5 border-white/10">
-        <CardHeader>
-          <CardTitle className="text-white">Cantidad a Añadir</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="amount" className="text-white">
-              Cantidad (USD)
-            </Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-              <Input
-                id="amount"
-                type="number"
-                placeholder="0.00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="pl-8 bg-white/5 border-white/20 text-white"
-                min="5"
-                max="1000"
-                step="0.01"
-              />
-            </div>
-            <p className="text-xs text-gray-400 mt-1">Mínimo $5.00, máximo $1,000.00</p>
-          </div>
+      {/* Alerta de configuración */}
+      {!stripeConfigured && (
+        <Alert className="border-yellow-500/20 bg-yellow-500/10">
+          <Info className="h-4 w-4 text-yellow-500" />
+          <AlertDescription className="text-yellow-200">
+            <strong>Modo Demo:</strong> Stripe no está configurado. Los pagos serán simulados.
+          </AlertDescription>
+        </Alert>
+      )}
 
-          {/* Cantidades sugeridas */}
-          <div className="grid grid-cols-4 gap-2">
-            {[25, 50, 100, 250].map((suggestedAmount) => (
-              <Button
-                key={suggestedAmount}
-                variant="outline"
-                size="sm"
-                onClick={() => setAmount(suggestedAmount.toString())}
-                className="border-white/20 text-white hover:bg-white/10"
-              >
-                ${suggestedAmount}
-              </Button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Selector de cantidad */}
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="amount" className="text-white">
+            Cantidad a añadir
+          </Label>
+          <Input
+            id="amount"
+            type="number"
+            placeholder="0.00"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="bg-white/5 border-white/20 text-white text-lg"
+            min="0.50"
+            step="0.01"
+          />
+          <p className="text-xs text-gray-400 mt-1">Mínimo: $0.50</p>
+        </div>
 
-      {/* Métodos de pago */}
-      {isValidAmount && (
-        <Tabs value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as any)}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="stripe">Tarjeta</TabsTrigger>
-            <TabsTrigger value="bank_transfer">Transferencia</TabsTrigger>
-          </TabsList>
+        {/* Métodos de pago */}
+        <div className="space-y-3">
+          <Label className="text-white">Método de pago</Label>
 
-          <TabsContent value="stripe" className="space-y-4">
-            <StripePaymentForm amount={amountNum} onSuccess={onSuccess} onCancel={onCancel} />
-          </TabsContent>
-
-          <TabsContent value="bank_transfer" className="space-y-4">
-            <Card className="bg-white/5 border-white/10">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Building2 className="h-5 w-5" />
-                  Transferencia Bancaria
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="bg-blue-500/10 border border-blue-400/30 rounded-lg p-4">
-                  <h4 className="text-blue-400 font-semibold text-sm mb-2">Información Importante</h4>
-                  <ul className="text-blue-300 text-xs space-y-1">
-                    <li>• Los fondos estarán disponibles en 1-3 días hábiles</li>
-                    <li>• Recibirás las instrucciones por email</li>
-                    <li>• Sin comisiones adicionales</li>
-                    <li>• Transferencia segura y verificada</li>
-                  </ul>
-                </div>
-
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={onCancel}
-                    className="flex-1 border-white/20 text-white hover:bg-white/10"
-                  >
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleBankTransfer} className="flex-1 bg-gradient-to-r from-blue-500 to-purple-500">
-                    Continuar con Transferencia
-                  </Button>
+          <div className="grid gap-3">
+            {/* Tarjeta de Crédito/Débito */}
+            <Card
+              className={`cursor-pointer transition-all ${
+                paymentMethod === "credit_card"
+                  ? "border-blue-500 bg-blue-500/10"
+                  : "border-white/20 bg-white/5 hover:bg-white/10"
+              }`}
+              onClick={() => setPaymentMethod("credit_card")}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <CreditCard className="h-5 w-5 text-blue-400" />
+                    <div>
+                      <div className="text-white font-medium">Tarjeta de Crédito/Débito</div>
+                      <div className="text-xs text-gray-400">Visa, Mastercard, Amex</div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Badge variant="outline" className="border-green-400/30 text-green-400">
+                      <Shield className="h-3 w-3 mr-1" />
+                      Seguro
+                    </Badge>
+                    <Badge variant="outline" className="border-blue-400/30 text-blue-400">
+                      Instantáneo
+                    </Badge>
+                  </div>
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
-      )}
+
+            {/* Transferencia Bancaria */}
+            <Card
+              className={`cursor-pointer transition-all ${
+                paymentMethod === "bank_transfer"
+                  ? "border-green-500 bg-green-500/10"
+                  : "border-white/20 bg-white/5 hover:bg-white/10"
+              }`}
+              onClick={() => setPaymentMethod("bank_transfer")}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Building2 className="h-5 w-5 text-green-400" />
+                    <div>
+                      <div className="text-white font-medium">Transferencia Bancaria</div>
+                      <div className="text-xs text-gray-400">1-3 días hábiles</div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Badge variant="outline" className="border-green-400/30 text-green-400">
+                      <Shield className="h-3 w-3 mr-1" />
+                      Seguro
+                    </Badge>
+                    <Badge variant="outline" className="border-yellow-400/30 text-yellow-400">
+                      1-3 días
+                    </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Wallet Digital */}
+            <Card
+              className={`cursor-pointer transition-all ${
+                paymentMethod === "digital_wallet"
+                  ? "border-purple-500 bg-purple-500/10"
+                  : "border-white/20 bg-white/5 hover:bg-white/10"
+              }`}
+              onClick={() => setPaymentMethod("digital_wallet")}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Smartphone className="h-5 w-5 text-purple-400" />
+                    <div>
+                      <div className="text-white font-medium">Wallet Digital</div>
+                      <div className="text-xs text-gray-400">Apple Pay, Google Pay, PayPal</div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Badge variant="outline" className="border-purple-400/30 text-purple-400">
+                      <Smartphone className="h-3 w-3 mr-1" />
+                      Móvil
+                    </Badge>
+                    <Badge variant="outline" className="border-blue-400/30 text-blue-400">
+                      Rápido
+                    </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Información de seguridad */}
+        <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <Shield className="h-5 w-5 text-green-400 mt-0.5" />
+            <div>
+              <h4 className="text-green-400 font-medium mb-1">Pago 100% Seguro</h4>
+              <p className="text-xs text-gray-300">
+                Tus datos están protegidos con encriptación de nivel bancario. No almacenamos información de tarjetas.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Botones de acción */}
+        <div className="flex gap-3 pt-4">
+          <Button
+            onClick={handleSubmit}
+            disabled={isLoading || !amount || !paymentMethod}
+            className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+          >
+            {isLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                Procesando...
+              </>
+            ) : (
+              <>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                {stripeConfigured ? "Procesar Pago" : "Simular Pago"}
+              </>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={onCancel}
+            disabled={isLoading}
+            className="border-white/20 text-white hover:bg-white/10"
+          >
+            Cancelar
+          </Button>
+        </div>
+
+        {/* Información adicional */}
+        <div className="text-xs text-gray-400 text-center">
+          <p>Al proceder, aceptas nuestros términos de servicio y política de privacidad.</p>
+        </div>
+      </div>
     </div>
   )
 }

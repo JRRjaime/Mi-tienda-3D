@@ -41,6 +41,28 @@ export default function BienvenidaPage() {
     return null
   }
 
+  if (!user || !user.name) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-white">Error: No se pudo cargar la información del usuario</p>
+          <Button onClick={() => router.push("/")} className="mt-4 bg-cyan-500 hover:bg-cyan-600">
+            Volver al inicio
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  const safeUser = {
+    ...user,
+    name: user.name || "Usuario",
+    email: user.email || "email@ejemplo.com",
+    role: user.role || "user",
+    interests: user.interests || [],
+    createdAt: user.createdAt || new Date().toISOString(),
+  }
+
   const getRoleInfo = (role: string) => {
     switch (role) {
       case "creator":
@@ -78,7 +100,14 @@ export default function BienvenidaPage() {
     }
   }
 
-  const roleInfo = getRoleInfo(user.role)
+  const roleInfo = getRoleInfo(safeUser.role)
+
+  const safeStats = {
+    balance: user.stats?.balance || 0,
+    totalOrders: user.stats?.totalOrders || 0,
+    modelsUploaded: user.stats?.modelsUploaded || 0,
+    rating: user.stats?.rating || 5.0,
+  }
 
   return (
     <div className="min-h-screen py-12 px-4">
@@ -99,11 +128,16 @@ export default function BienvenidaPage() {
           <CardHeader>
             <CardTitle className="flex items-center text-white">
               <Avatar className="h-12 w-12 mr-4">
-                <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
-                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                <AvatarImage
+                  src={safeUser.avatar && !safeUser.avatar.includes("blob:") ? safeUser.avatar : undefined}
+                  alt={safeUser.name}
+                />
+                <AvatarFallback className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white">
+                  {safeUser.name.charAt(0).toUpperCase()}
+                </AvatarFallback>
               </Avatar>
               <div>
-                <h2 className="text-2xl">{user.name}</h2>
+                <h2 className="text-2xl">{safeUser.name}</h2>
                 <Badge className={`${roleInfo.color} text-white mt-1`}>{roleInfo.title}</Badge>
               </div>
             </CardTitle>
@@ -113,11 +147,11 @@ export default function BienvenidaPage() {
               <div className="space-y-4">
                 <div className="flex items-center">
                   <Mail className="h-5 w-5 mr-3 text-cyan-400" />
-                  <span>{user.email}</span>
+                  <span>{safeUser.email}</span>
                 </div>
                 <div className="flex items-center">
                   <Calendar className="h-5 w-5 mr-3 text-cyan-400" />
-                  <span>Miembro desde {new Date(user.createdAt).toLocaleDateString()}</span>
+                  <span>Miembro desde {new Date(safeUser.createdAt).toLocaleDateString()}</span>
                 </div>
                 <div className="flex items-center">
                   <User className="h-5 w-5 mr-3 text-cyan-400" />
@@ -134,11 +168,11 @@ export default function BienvenidaPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Intereses Seleccionados</span>
-                    <Badge variant="secondary">{user.interests.length} temas</Badge>
+                    <Badge variant="secondary">{safeUser.interests.length} temas</Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Balance Inicial</span>
-                    <Badge variant="outline">${user.stats.balance}</Badge>
+                    <Badge variant="outline">${safeStats.balance.toFixed(2)}</Badge>
                   </div>
                 </div>
               </div>
@@ -179,19 +213,19 @@ export default function BienvenidaPage() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-cyan-400">{user.stats.balance}</div>
+                <div className="text-2xl font-bold text-cyan-400">${safeStats.balance.toFixed(2)}</div>
                 <div className="text-sm text-gray-300">Balance</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-400">{user.stats.totalOrders}</div>
+                <div className="text-2xl font-bold text-green-400">{safeStats.totalOrders}</div>
                 <div className="text-sm text-gray-300">Pedidos</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-purple-400">{user.stats.modelsUploaded}</div>
+                <div className="text-2xl font-bold text-purple-400">{safeStats.modelsUploaded}</div>
                 <div className="text-sm text-gray-300">Modelos</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-yellow-400">{user.stats.rating}</div>
+                <div className="text-2xl font-bold text-yellow-400">{safeStats.rating}</div>
                 <div className="text-sm text-gray-300">Rating</div>
               </div>
             </div>
@@ -217,7 +251,7 @@ export default function BienvenidaPage() {
             <User className="ml-2 h-5 w-5" />
           </Button>
 
-          {user.role === "creator" && (
+          {safeUser.role === "creator" && (
             <Button
               onClick={() => router.push("/subir-modelo")}
               className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-8 py-3"

@@ -134,7 +134,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         id: `tx_${Date.now()}`,
         type: "income",
         amount,
-        description: `Recarga de saldo - ${method === "credit_card" ? "Tarjeta de crédito" : "Transferencia bancaria"}`,
+        description: `Recarga de saldo - ${method === "credit_card" ? "Tarjeta de crédito" : method === "stripe" ? "Stripe" : "Transferencia bancaria"}`,
         date: new Date().toISOString(),
         status: "completed",
         paymentMethod: method,
