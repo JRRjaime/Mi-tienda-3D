@@ -10,6 +10,8 @@ import { CartProvider } from "@/contexts/cart-context"
 import { FollowProvider } from "@/contexts/follow-context"
 import { CollaborationProvider } from "@/contexts/collaboration-context"
 import { IntegrationProvider } from "@/contexts/integration-context"
+import { RecommendationsProvider } from "@/contexts/recommendations-context"
+import { AnalyticsProvider } from "@/contexts/analytics-context"
 
 // Provider para temas (independiente, va primero)
 const ThemeProviderWrapper = memo(({ children }: { children: ReactNode }) => (
@@ -23,7 +25,9 @@ ThemeProviderWrapper.displayName = "ThemeProviderWrapper"
 const DataProviders = memo(({ children }: { children: ReactNode }) => (
   <PlatformDataProvider>
     <StatsProvider>
-      <WalletProvider>{children}</WalletProvider>
+      <AnalyticsProvider>
+        <WalletProvider>{children}</WalletProvider>
+      </AnalyticsProvider>
     </StatsProvider>
   </PlatformDataProvider>
 ))
@@ -33,7 +37,9 @@ DataProviders.displayName = "DataProviders"
 const FeatureProviders = memo(({ children }: { children: ReactNode }) => (
   <CartProvider>
     <FollowProvider>
-      <CollaborationProvider>{children}</CollaborationProvider>
+      <CollaborationProvider>
+        <RecommendationsProvider>{children}</RecommendationsProvider>
+      </CollaborationProvider>
     </FollowProvider>
   </CartProvider>
 ))

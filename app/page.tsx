@@ -9,6 +9,7 @@ import { AuthModal } from "@/components/auth/auth-modal"
 import { useAuth } from "@/contexts/auth-context"
 import { ImageCarousel } from "@/components/image-carousel"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { RecommendationsWidget } from "@/components/ai/recommendations-widget"
 import {
   Printer,
   Palette,
@@ -397,6 +398,13 @@ export default function HomePage() {
               Buscar
             </Button>
           </div>
+        </div>
+      </section>
+
+      {/* AI Recommendations Widget */}
+      <section className="py-8 px-4">
+        <div className="container mx-auto max-w-md">
+          <RecommendationsWidget />
         </div>
       </section>
 
