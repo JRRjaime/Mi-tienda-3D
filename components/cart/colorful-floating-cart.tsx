@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useEnhancedCart } from "@/contexts/enhanced-cart-context"
 import { toast } from "@/components/ui/use-toast"
+import { useRouter } from "next/navigation"
 import Image from "next/image"
 
 export function ColorfulFloatingCart() {
   const [isExpanded, setIsExpanded] = useState(false)
+  const router = useRouter()
   const {
     items,
     totalItems,
@@ -39,12 +41,16 @@ export function ColorfulFloatingCart() {
       return
     }
 
+    // Cerrar el carrito y redirigir al checkout
+    setIsExpanded(false)
+
     toast({
       title: "🚀 ¡Redirigiendo al checkout!",
       description: "Preparando tu pedido increíble",
     })
 
-    console.log("Proceeding to checkout with:", { items, total })
+    // Redirigir a la página de checkout
+    router.push("/checkout")
   }
 
   return (
