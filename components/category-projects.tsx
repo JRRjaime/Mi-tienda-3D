@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
-import { useCart } from "@/contexts/cart-context"
+import { useEnhancedCart } from "@/contexts/enhanced-cart-context"
 import { useToast } from "@/hooks/use-toast"
 import { EnhancedProductCard } from "./enhanced-product-card"
 
@@ -286,7 +286,7 @@ export function CategoryProjects({ categoria }: CategoryProjectsProps) {
 
   const isCreator = currentUser.profileTypes.includes("creador")
 
-  const { addItem } = useCart()
+  const { addItem } = useEnhancedCart()
   const { toast } = useToast()
 
   const filteredProjects = useMemo(() => {
@@ -352,18 +352,18 @@ export function CategoryProjects({ categoria }: CategoryProjectsProps) {
       name: project.title,
       description: project.description,
       price: project.price,
-      type: project.category.includes("download") ? "download" : ("printed" as "download" | "printed"),
       image: project.image,
       creatorName: project.author,
       creatorId: project.author.toLowerCase().replace(" ", ""),
       category: project.category,
       tags: project.tags,
+      type: "download" as const,
       downloadFormat: ["STL", "OBJ", "3MF"],
     }
 
     addItem(cartItem)
     toast({
-      title: "Producto añadido",
+      title: "¡Producto añadido! 🎉",
       description: `${project.title} se ha añadido al carrito`,
     })
   }

@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ARVRViewer } from "./ar-vr-viewer"
 import { Heart, MessageCircle, Download, Star, Eye, Smartphone, Glasses, ShoppingCart, Share2 } from "lucide-react"
-import { useCart } from "@/contexts/cart-context"
+import { useEnhancedCart } from "@/contexts/enhanced-cart-context"
 import { useToast } from "@/hooks/use-toast"
 
 interface EnhancedProductCardProps {
@@ -55,7 +55,7 @@ export function EnhancedProductCard({
   const [isLiked, setIsLiked] = useState(false)
   const [isViewerOpen, setIsViewerOpen] = useState(false)
 
-  const { addItem } = useCart()
+  const { addItem } = useEnhancedCart()
   const { toast } = useToast()
 
   const handleLike = () => {
