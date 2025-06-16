@@ -69,9 +69,159 @@ export function NotificationSystem({ userId, userType }: NotificationSystemProps
 
   // Inicializar con array vacío
   useEffect(() => {
-    setNotifications([])
-    setUnreadCount(0)
+    // Cargar notificaciones guardadas
+    const savedNotifications = localStorage.getItem("user_notifications")
+    if (savedNotifications) {
+      try {
+        const parsed = JSON.parse(savedNotifications)
+        const notificationsWithDates = parsed.map((n: any) => ({
+          ...n,
+          timestamp: new Date(n.timestamp),
+        }))
+        setNotifications(notificationsWithDates)
+        setUnreadCount(notificationsWithDates.filter((n: any) => !n.read).length)
+      } catch (error) {
+        console.error("Error parsing notifications:", error)
+        setNotifications([])
+        setUnreadCount(0)
+      }
+    }
   }, [userId])
+
+  // Guardar notificaciones cuando cambien
+  useEffect(() => {
+    if (notifications.length > 0) {
+      localStorage.setItem("user_notifications", JSON.stringify(notifications))
+    }
+  }, [notifications])
+
+  // 🎉 ESCUCHAR EVENTOS DE INTEGRACIÓN
+  useEffect(() => {
+    const handlePurchaseComplete = (event: CustomEvent) => {
+      const { type, priority, title, message, buyerId, sellerId, orderId, sellerName } = event.detail
+
+      if (buyerId === userId) {
+        // Notificación para el comprador
+        addNotification({
+          type: "orders",
+          priority,
+          title,
+          message,
+          actionText: "Ver Pedido",
+          actionUrl: `/pedidos/${orderId}`,
+          metadata: { orderId, sellerId, sellerName },
+        })
+      }
+    }
+
+    const handleNewSale = (event: CustomEvent) => {
+      const { type, priority, title, message, buyerId, sellerId, orderId, buyerName } = event.detail
+
+      if (sellerId === userId) {
+        // Notificación para el vendedor
+        addNotification({
+          type: "sales",
+          priority,
+          title,
+          message,
+          actionText: "Gestionar Pedido",
+          actionUrl: `/pedidos/${orderId}`,
+          metadata: { orderId, buyerId, buyerName },
+        })
+      }
+    }
+
+    const handleOrderNotification = (event: CustomEvent) => {
+      const { type, priority, title, message, orderId } = event.detail
+
+      addNotification({
+        type: "orders",
+        priority,
+        title,
+        message,
+        actionText: "Ver Detalles",
+        actionUrl: `/pedidos/${orderId}`,
+        metadata: { orderId },
+      })
+    }
+
+    // Registrar event listeners
+    window.addEventListener("purchaseComplete", handlePurchaseComplete as EventListener)
+    window.addEventListener("newSale", handleNewSale as EventListener)
+    window.addEventListener("orderNotification", handleOrderNotification as EventListener)
+
+    return () => {
+      window.removeEventListener("purchaseComplete", handlePurchaseComplete as EventListener)
+      window.removeEventListener("newSale", handleNewSale as EventListener)
+      window.removeEventListener("orderNotification", handleOrderNotification as EventListener)
+    }
+  }, [userId])
+
+  const addNotification = (notificationData: Partial<Notification>) => {
+    const newNotification: Notification = {
+      id: `notif-${Date.now()}`,
+      type: notificationData.type || "system",
+      priority: notificationData.priority || "normal",
+      title: notificationData.title || "Nueva notificación",
+      message: notificationData.message || "",
+      icon: getNotificationIcon(notificationData.type || "system"),
+      color: getNotificationColor(notificationData.type || "system"),
+      timestamp: new Date(),
+      read: false,
+      archived: false,
+      starred: false,
+      actionUrl: notificationData.actionUrl,
+      actionText: notificationData.actionText,
+      metadata: notificationData.metadata,
+    }
+
+    setNotifications((prev) => [newNotification, ...prev])
+    setUnreadCount((prev) => prev + 1)
+
+    // Reproducir sonido si está habilitado
+    if (soundEnabled) {
+      playNotificationSound()
+    }
+
+    // Mostrar notificación push si está habilitado
+    if (pushEnabled) {
+      showPushNotification(newNotification)
+    }
+  }
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case "sales":
+        return "💰"
+      case "orders":
+        return "📦"
+      case "messages":
+        return "💬"
+      case "followers":
+        return "👥"
+      case "system":
+        return "⚙️"
+      default:
+        return "🔔"
+    }
+  }
+
+  const getNotificationColor = (type: string) => {
+    switch (type) {
+      case "sales":
+        return "#10b981" // green
+      case "orders":
+        return "#3b82f6" // blue
+      case "messages":
+        return "#8b5cf6" // purple
+      case "followers":
+        return "#f59e0b" // amber
+      case "system":
+        return "#6b7280" // gray
+      default:
+        return "#06b6d4" // cyan
+    }
+  }
 
   const showPushNotification = (notification: Notification) => {
     if ("Notification" in window && Notification.permission === "granted") {
@@ -164,7 +314,7 @@ export function NotificationSystem({ userId, userType }: NotificationSystemProps
     return filtered.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
   }
 
-  const getNotificationIcon = (type: string) => {
+  const getNotificationIconComponent = (type: string) => {
     switch (type) {
       case "sales":
         return <DollarSign className="h-4 w-4" />
@@ -351,7 +501,7 @@ export function NotificationSystem({ userId, userType }: NotificationSystemProps
                   <div className="mt-6 p-4 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-lg border border-purple-500/30">
                     <div className="text-2xl mb-2">🎯</div>
                     <p className="text-cyan-400 font-medium">
-                      ¡Tip Pro! Sube tu primer modelo y prepárate para la avalancha de notificaciones 📈
+                      ¡Tip Pro! Haz tu primera compra y prepárate para la avalancha de notificaciones 📈
                     </p>
                   </div>
                 </div>
@@ -370,7 +520,7 @@ export function NotificationSystem({ userId, userType }: NotificationSystemProps
                           className="w-8 h-8 rounded-full flex items-center justify-center text-white"
                           style={{ backgroundColor: notification.color }}
                         >
-                          {getNotificationIcon(notification.type)}
+                          {getNotificationIconComponent(notification.type)}
                         </div>
 
                         <div className="flex-1 min-w-0">
@@ -394,14 +544,15 @@ export function NotificationSystem({ userId, userType }: NotificationSystemProps
                               <Clock className="h-3 w-3" />
                               {formatTimestamp(notification.timestamp)}
                             </span>
-                            {notification.actionText && (
+                            {notification.actionText && notification.actionUrl && (
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-xs text-cyan-400 hover:bg-white/10 h-6"
+                                className="text-xs text-cyan-400 hover:bg-cyan-400/10"
                                 onClick={() => {
                                   markAsRead(notification.id)
                                   // Aquí iría la navegación
+                                  console.log("Navigate to:", notification.actionUrl)
                                 }}
                               >
                                 {notification.actionText}
@@ -412,38 +563,29 @@ export function NotificationSystem({ userId, userType }: NotificationSystemProps
 
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="text-gray-400 hover:bg-white/10 h-6 w-6 p-0">
+                            <Button variant="ghost" size="sm" className="text-gray-400 hover:bg-white/10">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-gray-800 border-gray-700">
+                          <DropdownMenuContent className="bg-gray-800 border-gray-700">
                             {!notification.read && (
-                              <DropdownMenuItem
-                                onClick={() => markAsRead(notification.id)}
-                                className="text-gray-300 hover:bg-gray-700"
-                              >
+                              <DropdownMenuItem onClick={() => markAsRead(notification.id)}>
                                 <Check className="h-4 w-4 mr-2" />
                                 Marcar como leída
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem
-                              onClick={() => toggleStar(notification.id)}
-                              className="text-gray-300 hover:bg-gray-700"
-                            >
+                            <DropdownMenuItem onClick={() => toggleStar(notification.id)}>
                               <Star className="h-4 w-4 mr-2" />
                               {notification.starred ? "Quitar estrella" : "Destacar"}
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => archiveNotification(notification.id)}
-                              className="text-gray-300 hover:bg-gray-700"
-                            >
+                            <DropdownMenuItem onClick={() => archiveNotification(notification.id)}>
                               <Archive className="h-4 w-4 mr-2" />
                               Archivar
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator className="bg-gray-700" />
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => deleteNotification(notification.id)}
-                              className="text-red-400 hover:bg-gray-700"
+                              className="text-red-400"
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
                               Eliminar

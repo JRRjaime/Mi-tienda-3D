@@ -33,6 +33,8 @@ import {
 } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useCart, type ShippingAddress } from "@/contexts/cart-context"
+import { useAuth } from "@/contexts/auth-context"
+import { useIntegration } from "@/contexts/integration-context"
 import { useToast } from "@/hooks/use-toast"
 
 interface PaymentMethod {
@@ -63,6 +65,8 @@ export function EnhancedCartSystem() {
     total,
   } = useCart()
 
+  const { user } = useAuth()
+  const { triggerPurchaseComplete } = useIntegration()
   const { toast } = useToast()
   const [isOpen, setIsOpen] = useState(false)
   const [currentStep, setCurrentStep] = useState<"cart" | "checkout" | "confirmation">("cart")
@@ -189,7 +193,7 @@ export function EnhancedCartSystem() {
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
       const emailData = {
-        to: "usuario@email.com", // En producción, obtener del contexto de usuario
+        to: user?.email || "usuario@email.com",
         subject: `Confirmación de pedido #${orderNum}`,
         orderNumber: orderNum,
         items: items,
@@ -205,7 +209,7 @@ export function EnhancedCartSystem() {
         description: "Te hemos enviado la confirmación del pedido por email",
       })
     },
-    [items, total, localShippingAddress, toast],
+    [items, total, localShippingAddress, toast, user],
   )
 
   const processOrder = useCallback(async () => {
@@ -227,6 +231,15 @@ export function EnhancedCartSystem() {
       return
     }
 
+    if (!user) {
+      toast({
+        title: "Usuario requerido",
+        description: "Debes iniciar sesión para completar la compra",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsProcessingOrder(true)
 
     try {
@@ -239,6 +252,27 @@ export function EnhancedCartSystem() {
       // Guardar dirección de envío
       setShippingAddress(localShippingAddress)
 
+      // 🎉 INTEGRACIÓN AUTOMÁTICA - Disparar todos los eventos
+      const purchaseData = {
+        orderId: newOrderNumber,
+        buyerId: user.id,
+        buyerName: user.name,
+        sellerId: items[0]?.creatorId || "seller1", // En un caso real, cada item tendría su vendedor
+        sellerName: items[0]?.creatorName || "Vendedor",
+        items: items.map((item) => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image || "/placeholder.svg",
+        })),
+        total: total,
+        shippingAddress: localShippingAddress,
+      }
+
+      // 🚀 Disparar integración completa
+      triggerPurchaseComplete(purchaseData)
+
       // Enviar confirmación por email
       await sendOrderConfirmation(newOrderNumber)
 
@@ -249,7 +283,9 @@ export function EnhancedCartSystem() {
 
       toast({
         title: "¡Pedido confirmado!",
-        description: "Tu pedido ha sido procesado exitosamente",
+        description:
+          "Tu pedido ha sido procesado exitosamente. Se han creado las notificaciones y chat automáticamente.",
+        duration: 5000,
       })
     } catch (error) {
       toast({
@@ -260,7 +296,19 @@ export function EnhancedCartSystem() {
     } finally {
       setIsProcessingOrder(false)
     }
-  }, [acceptTerms, selectedPayment, localShippingAddress, setShippingAddress, sendOrderConfirmation, clearCart, toast])
+  }, [
+    acceptTerms,
+    selectedPayment,
+    user,
+    localShippingAddress,
+    setShippingAddress,
+    items,
+    total,
+    triggerPurchaseComplete,
+    sendOrderConfirmation,
+    clearCart,
+    toast,
+  ])
 
   const renderCartStep = () => (
     <div className="space-y-4">
@@ -777,7 +825,7 @@ export function EnhancedCartSystem() {
                 <Mail className="h-3 w-3" />
                 Confirmación enviada:
               </span>
-              <span className="text-white">usuario@email.com</span>
+              <span className="text-white">{user?.email || "usuario@email.com"}</span>
             </div>
           </div>
         </CardContent>
@@ -787,9 +835,12 @@ export function EnhancedCartSystem() {
         <div className="flex items-start gap-3">
           <Mail className="h-5 w-5 text-blue-400 mt-0.5" />
           <div className="text-left">
-            <h4 className="text-blue-400 font-semibold text-sm">Confirmación por Email</h4>
+            <h4 className="text-blue-400 font-semibold text-sm">🎉 Integración Automática Activada</h4>
             <p className="text-blue-300 text-xs mt-1">
-              Hemos enviado los detalles del pedido y el seguimiento a tu email. Revisa también la carpeta de spam.
+              ✅ Notificación de compra creada
+              <br />✅ Chat con vendedor iniciado
+              <br />✅ Pedido registrado en el sistema
+              <br />✅ Email de confirmación enviado
             </p>
           </div>
         </div>

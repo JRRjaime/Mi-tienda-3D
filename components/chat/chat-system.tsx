@@ -1,239 +1,361 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import type React from "react"
+
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Textarea } from "@/components/ui/textarea"
 import {
-  MessageSquare,
-  Search,
   Send,
-  Paperclip,
-  ImageIcon,
-  Smile,
   Phone,
   Video,
-  Info,
+  MoreVertical,
+  Search,
   X,
+  Plus,
+  Paperclip,
+  Smile,
+  CheckCheck,
+  Star,
+  Archive,
+  Trash2,
+  Check,
+  MessageSquare,
   Maximize2,
   Minimize2,
-  ChevronDown,
-  CheckCheck,
-  Check,
-  Clock,
-  User,
-  Printer,
-  Upload,
 } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/contexts/auth-context"
 
-// Tipos
-interface ChatMessage {
+interface Message {
   id: string
   senderId: string
   receiverId: string
   content: string
   timestamp: Date
-  status: "sent" | "delivered" | "read" | "failed"
-  attachments?: {
-    type: "image" | "file" | "model"
-    url: string
-    name: string
-    size?: number
-  }[]
+  read: boolean
+  type: "text" | "image" | "file" | "audio"
+  metadata?: Record<string, any>
 }
 
-interface ChatContact {
+interface Chat {
+  id: string
+  participants: string[]
+  participantNames: string[]
+  participantAvatars: string[]
+  lastMessage?: Message
+  unreadCount: number
+  isGroup: boolean
+  groupName?: string
+  groupAvatar?: string
+  createdAt: Date
+  updatedAt: Date
+  archived: boolean
+  starred: boolean
+  muted: boolean
+  type: "direct" | "group" | "support" | "business"
+}
+
+interface Contact {
   id: string
   name: string
-  avatar?: string
+  avatar: string
   status: "online" | "offline" | "away" | "busy"
   lastSeen?: Date
-  unreadCount: number
-  lastMessage?: {
-    content: string
-    timestamp: Date
-    isFromMe: boolean
-  }
   type: "user" | "creator" | "printer" | "support"
 }
 
-interface ChatSystemProps {
-  userId: string
-  userType: string[]
-}
-
-export function ChatSystem({ userId, userType }: ChatSystemProps) {
+export function ChatSystem() {
+  const { user } = useAuth()
+  const [chats, setChats] = useState<Chat[]>([])
+  const [messages, setMessages] = useState<Record<string, Message[]>>({})
+  const [activeChat, setActiveChat] = useState<string | null>(null)
+  const [newMessage, setNewMessage] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [isTyping, setIsTyping] = useState(false)
+  const [contacts, setContacts] = useState<Contact[]>([])
+  const [showNewChatModal, setShowNewChatModal] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
-  const [activeChat, setActiveChat] = useState<string | null>(null)
-  const [message, setMessage] = useState("")
-  const [contacts, setContacts] = useState<ChatContact[]>([])
-  const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({})
-  const [searchQuery, setSearchQuery] = useState("")
-  const [activeTab, setActiveTab] = useState<"all" | "users" | "creators" | "printers" | "support">("all")
-  const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Inicializar con arrays vacíos
+  // Cargar chats y mensajes guardados
   useEffect(() => {
-    setContacts([])
-    setMessages({})
-  }, [userId])
+    if (!user) return
 
-  // Scroll al último mensaje cuando cambia la conversación activa o llegan nuevos mensajes
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
-    }
-  }, [activeChat, messages])
+    const savedChats = localStorage.getItem(`chats_${user.id}`)
+    const savedMessages = localStorage.getItem(`messages_${user.id}`)
 
-  // Filtrar contactos por búsqueda y tipo
-  const filteredContacts = contacts.filter((contact) => {
-    const matchesSearch = contact.name.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesType = activeTab === "all" || contact.type === activeTab.slice(0, -1) // Quitar la 's' final
-    return matchesSearch && matchesType
-  })
-
-  // Ordenar contactos: primero los que tienen mensajes no leídos, luego por timestamp del último mensaje
-  const sortedContacts = [...filteredContacts].sort((a, b) => {
-    if (a.unreadCount !== b.unreadCount) {
-      return b.unreadCount - a.unreadCount
+    if (savedChats) {
+      try {
+        const parsedChats = JSON.parse(savedChats).map((chat: any) => ({
+          ...chat,
+          createdAt: new Date(chat.createdAt),
+          updatedAt: new Date(chat.updatedAt),
+          lastMessage: chat.lastMessage
+            ? {
+                ...chat.lastMessage,
+                timestamp: new Date(chat.lastMessage.timestamp),
+              }
+            : undefined,
+        }))
+        setChats(parsedChats)
+      } catch (error) {
+        console.error("Error parsing chats:", error)
+      }
     }
 
-    const aTime = a.lastMessage?.timestamp.getTime() || 0
-    const bTime = b.lastMessage?.timestamp.getTime() || 0
-    return bTime - aTime
-  })
+    if (savedMessages) {
+      try {
+        const parsedMessages = JSON.parse(savedMessages)
+        const messagesWithDates = Object.keys(parsedMessages).reduce(
+          (acc, chatId) => {
+            acc[chatId] = parsedMessages[chatId].map((msg: any) => ({
+              ...msg,
+              timestamp: new Date(msg.timestamp),
+            }))
+            return acc
+          },
+          {} as Record<string, Message[]>,
+        )
+        setMessages(messagesWithDates)
+      } catch (error) {
+        console.error("Error parsing messages:", error)
+      }
+    }
+
+    // Cargar contactos de ejemplo
+    setContacts([
+      {
+        id: "creator1",
+        name: "Ana García",
+        avatar: "/placeholder.svg?height=40&width=40",
+        status: "online",
+        type: "creator",
+      },
+      {
+        id: "printer1",
+        name: "TechPrint 3D",
+        avatar: "/placeholder.svg?height=40&width=40",
+        status: "online",
+        type: "printer",
+      },
+      {
+        id: "support1",
+        name: "Soporte Técnico",
+        avatar: "/placeholder.svg?height=40&width=40",
+        status: "online",
+        type: "support",
+      },
+    ])
+  }, [user])
+
+  // 🎉 ESCUCHAR EVENTOS DE INTEGRACIÓN PARA CREAR CHATS AUTOMÁTICAMENTE
+  useEffect(() => {
+    const handleCreateChat = (event: CustomEvent) => {
+      const { contactId, contactName, contactType, initialMessage } = event.detail
+
+      if (!user) return
+
+      // Verificar si ya existe un chat con este contacto
+      const existingChat = chats.find(
+        (chat) => chat.participants.includes(contactId) && chat.participants.includes(user.id),
+      )
+
+      if (existingChat) {
+        // Si ya existe, abrir el chat y enviar el mensaje inicial
+        setActiveChat(existingChat.id)
+        if (initialMessage) {
+          setTimeout(() => {
+            sendMessage(existingChat.id, initialMessage)
+          }, 500)
+        }
+      } else {
+        // Crear nuevo chat
+        const newChatId = `chat-${Date.now()}`
+        const newChat: Chat = {
+          id: newChatId,
+          participants: [user.id, contactId],
+          participantNames: [user.name, contactName],
+          participantAvatars: [user.avatar || "/placeholder.svg", "/placeholder.svg"],
+          unreadCount: 0,
+          isGroup: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          archived: false,
+          starred: false,
+          muted: false,
+          type: contactType === "creator" ? "business" : "direct",
+        }
+
+        setChats((prev) => [newChat, ...prev])
+        setActiveChat(newChatId)
+
+        // Enviar mensaje inicial automáticamente
+        if (initialMessage) {
+          setTimeout(() => {
+            sendMessage(newChatId, initialMessage)
+          }, 500)
+        }
+
+        console.log("🎉 Chat created automatically:", newChatId)
+      }
+    }
+
+    window.addEventListener("createChat", handleCreateChat as EventListener)
+
+    return () => {
+      window.removeEventListener("createChat", handleCreateChat as EventListener)
+    }
+  }, [user, chats])
+
+  // Guardar chats cuando cambien
+  useEffect(() => {
+    if (user && chats.length > 0) {
+      localStorage.setItem(`chats_${user.id}`, JSON.stringify(chats))
+    }
+  }, [chats, user])
+
+  // Guardar mensajes cuando cambien
+  useEffect(() => {
+    if (user && Object.keys(messages).length > 0) {
+      localStorage.setItem(`messages_${user.id}`, JSON.stringify(messages))
+    }
+  }, [messages, user])
+
+  // Scroll automático al final de los mensajes
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages, activeChat])
+
+  const sendMessage = useCallback(
+    (chatId: string, content: string, type: "text" | "image" | "file" | "audio" = "text") => {
+      if (!user || !content.trim()) return
+
+      const chat = chats.find((c) => c.id === chatId)
+      if (!chat) return
+
+      const newMessage: Message = {
+        id: `msg-${Date.now()}`,
+        senderId: user.id,
+        receiverId: chat.participants.find((p) => p !== user.id) || "",
+        content: content.trim(),
+        timestamp: new Date(),
+        read: false,
+        type,
+      }
+
+      // Agregar mensaje
+      setMessages((prev) => ({
+        ...prev,
+        [chatId]: [...(prev[chatId] || []), newMessage],
+      }))
+
+      // Actualizar último mensaje del chat
+      setChats((prev) =>
+        prev.map((c) =>
+          c.id === chatId
+            ? {
+                ...c,
+                lastMessage: newMessage,
+                updatedAt: new Date(),
+              }
+            : c,
+        ),
+      )
+
+      setNewMessage("")
+    },
+    [user, chats],
+  )
 
   const handleSendMessage = () => {
-    if (!message.trim() || !activeChat) return
-
-    const newMessage: ChatMessage = {
-      id: `msg-${Date.now()}`,
-      senderId: userId,
-      receiverId: activeChat,
-      content: message,
-      timestamp: new Date(),
-      status: "sent",
+    if (activeChat && newMessage.trim()) {
+      sendMessage(activeChat, newMessage)
     }
+  }
 
-    // Actualizar mensajes
-    setMessages((prev) => ({
-      ...prev,
-      [activeChat]: [...(prev[activeChat] || []), newMessage],
-    }))
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault()
+      handleSendMessage()
+    }
+  }
 
-    // Limpiar input
-    setMessage("")
+  const createNewChat = (contactId: string) => {
+    if (!user) return
 
-    // Simular respuesta después de un tiempo aleatorio
-    setTimeout(
-      () => {
-        const contact = contacts.find((c) => c.id === activeChat)
-        if (!contact) return
+    const contact = contacts.find((c) => c.id === contactId)
+    if (!contact) return
 
-        // Marcar como entregado
-        setMessages((prev) => ({
-          ...prev,
-          [activeChat]: prev[activeChat].map((msg) =>
-            msg.id === newMessage.id ? { ...msg, status: "delivered" } : msg,
-          ),
-        }))
-
-        // Simular que el contacto está escribiendo
-        setTimeout(() => {
-          const responseMessage: ChatMessage = {
-            id: `msg-${Date.now() + 1}`,
-            senderId: activeChat,
-            receiverId: userId,
-            content: [
-              "Claro, entiendo",
-              "Gracias por tu mensaje",
-              "Lo revisaré pronto",
-              "¿Necesitas algo más?",
-              "Perfecto, hablamos luego",
-            ][Math.floor(Math.random() * 5)],
-            timestamp: new Date(),
-            status: "read",
-          }
-
-          setMessages((prev) => ({
-            ...prev,
-            [activeChat]: [...(prev[activeChat] || []), responseMessage],
-          }))
-
-          // Marcar como leído después de un tiempo
-          setTimeout(() => {
-            setMessages((prev) => ({
-              ...prev,
-              [activeChat]: prev[activeChat].map((msg) => (msg.senderId === userId ? { ...msg, status: "read" } : msg)),
-            }))
-          }, 1000)
-        }, 2000)
-      },
-      1000 + Math.random() * 2000,
+    // Verificar si ya existe un chat
+    const existingChat = chats.find(
+      (chat) => chat.participants.includes(contactId) && chat.participants.includes(user.id),
     )
-  }
 
-  const handleOpenChat = (contactId: string) => {
-    setActiveChat(contactId)
-
-    // Marcar mensajes como leídos
-    setContacts((prev) => prev.map((contact) => (contact.id === contactId ? { ...contact, unreadCount: 0 } : contact)))
-
-    if (isMinimized) {
-      setIsMinimized(false)
+    if (existingChat) {
+      setActiveChat(existingChat.id)
+      setShowNewChatModal(false)
+      return
     }
 
-    if (!isOpen) {
-      setIsOpen(true)
+    const newChatId = `chat-${Date.now()}`
+    const newChat: Chat = {
+      id: newChatId,
+      participants: [user.id, contactId],
+      participantNames: [user.name, contact.name],
+      participantAvatars: [user.avatar || "/placeholder.svg", contact.avatar],
+      unreadCount: 0,
+      isGroup: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      archived: false,
+      starred: false,
+      muted: false,
+      type: contact.type === "creator" ? "business" : "direct",
     }
+
+    setChats((prev) => [newChat, ...prev])
+    setActiveChat(newChatId)
+    setShowNewChatModal(false)
   }
 
-  const formatTime = (date: Date) => {
+  const getFilteredChats = () => {
+    return chats
+      .filter((chat) => {
+        if (!searchQuery) return true
+        const otherParticipantName = chat.participantNames.find((name) => name !== user?.name) || ""
+        return otherParticipantName.toLowerCase().includes(searchQuery.toLowerCase())
+      })
+      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+  }
+
+  const formatTimestamp = (timestamp: Date) => {
     const now = new Date()
-    const diff = now.getTime() - date.getTime()
-    const isToday = date.toDateString() === now.toDateString()
+    const diff = now.getTime() - timestamp.getTime()
+    const minutes = Math.floor(diff / 60000)
+    const hours = Math.floor(diff / 3600000)
+    const days = Math.floor(diff / 86400000)
 
-    if (isToday) {
-      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    } else if (diff < 7 * 24 * 60 * 60 * 1000) {
-      return ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"][date.getDay()]
-    } else {
-      return date.toLocaleDateString([], { day: "numeric", month: "numeric" })
-    }
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "sent":
-        return <Check className="h-3 w-3 text-gray-400" />
-      case "delivered":
-        return <CheckCheck className="h-3 w-3 text-gray-400" />
-      case "read":
-        return <CheckCheck className="h-3 w-3 text-blue-500" />
-      default:
-        return <Clock className="h-3 w-3 text-gray-400" />
-    }
-  }
-
-  const getContactTypeIcon = (type: string) => {
-    switch (type) {
-      case "user":
-        return <User className="h-3 w-3" />
-      case "creator":
-        return <Upload className="h-3 w-3" />
-      case "printer":
-        return <Printer className="h-3 w-3" />
-      case "support":
-        return <MessageSquare className="h-3 w-3" />
-      default:
-        return null
-    }
+    if (minutes < 1) return "Ahora"
+    if (minutes < 60) return `${minutes}m`
+    if (hours < 24) return `${hours}h`
+    if (days < 7) return `${days}d`
+    return timestamp.toLocaleDateString()
   }
 
   const getStatusColor = (status: string) => {
@@ -249,11 +371,8 @@ export function ChatSystem({ userId, userType }: ChatSystemProps) {
     }
   }
 
-  const activeContact = activeChat ? contacts.find((c) => c.id === activeChat) : null
-  const chatMessages = activeChat ? messages[activeChat] || [] : []
-
-  // Calcular el total de mensajes no leídos
-  const totalUnreadCount = contacts.reduce((sum, contact) => sum + contact.unreadCount, 0)
+  const activeChat_data = chats.find((c) => c.id === activeChat)
+  const activeChatMessages = activeChat ? messages[activeChat] || [] : []
 
   return (
     <>
@@ -261,13 +380,15 @@ export function ChatSystem({ userId, userType }: ChatSystemProps) {
       {!isOpen && (
         <Button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 shadow-lg hover:shadow-xl transition-all duration-300"
+          className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 shadow-lg hover:shadow-xl transition-all duration-300 z-50"
           size="icon"
         >
           <MessageSquare className="h-6 w-6" />
-          {totalUnreadCount > 0 && (
+          {chats.reduce((sum, chat) => sum + chat.unreadCount, 0) > 0 && (
             <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-xs flex items-center justify-center p-0">
-              {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
+              {chats.reduce((sum, chat) => sum + chat.unreadCount, 0) > 99
+                ? "99+"
+                : chats.reduce((sum, chat) => sum + chat.unreadCount, 0)}
             </Badge>
           )}
         </Button>
@@ -275,12 +396,12 @@ export function ChatSystem({ userId, userType }: ChatSystemProps) {
 
       {/* Ventana de chat */}
       {isOpen && (
-        <Card
+        <div
           className={cn(
-            "fixed z-50 bg-white/5 backdrop-blur-sm border-white/10 shadow-xl transition-all duration-300",
+            "fixed z-50 bg-gray-900/95 backdrop-blur-sm border border-white/10 shadow-xl transition-all duration-300",
             isMinimized
               ? "bottom-6 right-6 h-14 w-72 rounded-full overflow-hidden"
-              : "bottom-6 right-6 w-[380px] h-[600px] rounded-xl overflow-hidden",
+              : "bottom-6 right-6 w-[420px] h-[600px] rounded-xl overflow-hidden",
           )}
         >
           {isMinimized ? (
@@ -291,302 +412,415 @@ export function ChatSystem({ userId, userType }: ChatSystemProps) {
               <div className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5 text-white" />
                 <span className="font-medium text-white">Mensajes</span>
-                {totalUnreadCount > 0 && (
-                  <Badge className="bg-red-500 text-white">{totalUnreadCount > 99 ? "99+" : totalUnreadCount}</Badge>
+                {chats.reduce((sum, chat) => sum + chat.unreadCount, 0) > 0 && (
+                  <Badge className="bg-red-500 text-white">
+                    {chats.reduce((sum, chat) => sum + chat.unreadCount, 0) > 99
+                      ? "99+"
+                      : chats.reduce((sum, chat) => sum + chat.unreadCount, 0)}
+                  </Badge>
                 )}
               </div>
               <Maximize2 className="h-4 w-4 text-white" />
             </div>
           ) : (
-            <>
-              {/* Cabecera */}
-              <CardHeader className="bg-gradient-to-r from-cyan-500 to-blue-500 p-4 flex flex-row items-center justify-between">
-                <CardTitle className="text-white text-lg flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5" />
-                  {activeChat ? (
-                    <div className="flex items-center gap-2">
+            <div className="flex h-full bg-gray-900/95 backdrop-blur-sm rounded-lg border border-white/10 overflow-hidden">
+              {/* Lista de chats */}
+              <div className="w-80 border-r border-white/10 flex flex-col">
+                <div className="p-4 border-b border-white/10">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-white font-semibold">Mensajes</h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowNewChatModal(true)}
+                      className="text-white hover:bg-white/10"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Buscar conversaciones..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10 bg-white/5 border-white/20 text-white"
+                    />
+                  </div>
+                </div>
+
+                <ScrollArea className="flex-1">
+                  {getFilteredChats().length === 0 ? (
+                    <div className="p-8 text-center">
+                      <div className="text-6xl mb-4">💬</div>
+                      <h3 className="text-white font-bold text-lg mb-2">¡Hora de Socializar! 🎉</h3>
+                      <p className="text-gray-400 mb-4">
+                        Tu bandeja de entrada está más vacía que mi nevera...
+                        <br />
+                        ¡Pero eso está a punto de cambiar! 🚀
+                      </p>
+                      <div className="space-y-2 text-sm text-gray-500">
+                        <div className="flex items-center justify-center gap-2">
+                          <span>🛒</span>
+                          <span>Compra algo y chatea con vendedores</span>
+                        </div>
+                        <div className="flex items-center justify-center gap-2">
+                          <span>👥</span>
+                          <span>Conecta con otros creadores</span>
+                        </div>
+                        <div className="flex items-center justify-center gap-2">
+                          <span>🎨</span>
+                          <span>Colabora en proyectos épicos</span>
+                        </div>
+                      </div>
                       <Button
-                        variant="ghost"
-                        size="sm"
-                        className="p-0 h-6 text-white hover:bg-white/10"
-                        onClick={() => setActiveChat(null)}
+                        onClick={() => setShowNewChatModal(true)}
+                        className="mt-4 bg-gradient-to-r from-purple-500 to-pink-500"
                       >
-                        <ChevronDown className="h-4 w-4 mr-1" />
-                        <span>{activeContact?.name}</span>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Iniciar Chat
                       </Button>
-                      <div className={cn("h-2 w-2 rounded-full", getStatusColor(activeContact?.status || "offline"))} />
                     </div>
                   ) : (
-                    <span>Mensajes</span>
-                  )}
-                </CardTitle>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-white hover:bg-white/10 h-8 w-8 p-0"
-                    onClick={() => setIsMinimized(true)}
-                  >
-                    <Minimize2 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-white hover:bg-white/10 h-8 w-8 p-0"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardHeader>
+                    <div className="space-y-1">
+                      {getFilteredChats().map((chat) => {
+                        const otherParticipantIndex = chat.participants.findIndex((p) => p !== user?.id)
+                        const otherParticipantName = chat.participantNames[otherParticipantIndex] || "Usuario"
+                        const otherParticipantAvatar =
+                          chat.participantAvatars[otherParticipantIndex] || "/placeholder.svg"
 
-              {/* Contenido */}
-              <CardContent className="p-0 flex flex-col h-[calc(100%-64px)]">
-                {!activeChat ? (
-                  <>
-                    {/* Lista de contactos */}
-                    <div className="p-3">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input
-                          placeholder="Buscar conversaciones..."
-                          className="pl-9 bg-white/5"
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                      </div>
-                    </div>
-
-                    <Tabs defaultValue="all" value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-                      <TabsList className="grid grid-cols-5 bg-white/5 mx-3">
-                        <TabsTrigger value="all">Todos</TabsTrigger>
-                        <TabsTrigger value="users">
-                          <User className="h-4 w-4" />
-                        </TabsTrigger>
-                        <TabsTrigger value="creators">
-                          <Upload className="h-4 w-4" />
-                        </TabsTrigger>
-                        <TabsTrigger value="printers">
-                          <Printer className="h-4 w-4" />
-                        </TabsTrigger>
-                        <TabsTrigger value="support">
-                          <Info className="h-4 w-4" />
-                        </TabsTrigger>
-                      </TabsList>
-                    </Tabs>
-
-                    <ScrollArea className="flex-1 px-3 py-2">
-                      {sortedContacts.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-center p-6">
-                          <div className="text-6xl mb-4">💬</div>
-                          <div className="text-4xl mb-3">🦗</div>
-                          <h3 className="text-white font-bold text-lg mb-2">¡Silencio de Grillos! 🦗</h3>
-                          <p className="text-gray-400 mb-4">
-                            Tu bandeja de entrada está más vacía que el espacio...
-                            <br />
-                            ¡Pero eso está a punto de cambiar! 🚀
-                          </p>
-                          <div className="space-y-3 text-sm">
-                            <div className="flex items-center gap-2 text-gray-500">
-                              <span>🎨</span>
-                              <span>Los creadores te van a escribir</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-gray-500">
-                              <span>🖨️</span>
-                              <span>Los impresores van a contactarte</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-gray-500">
-                              <span>🛍️</span>
-                              <span>Los compradores van a preguntar</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-gray-500">
-                              <span>🎯</span>
-                              <span>El soporte siempre está aquí</span>
-                            </div>
-                          </div>
-                          <div className="mt-6 p-4 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 rounded-lg border border-cyan-500/30">
-                            <div className="text-2xl mb-2">💡</div>
-                            <p className="text-cyan-400 font-medium text-sm">
-                              ¡Empieza a interactuar y este chat se va a llenar de conversaciones épicas! ⚡
-                            </p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-1">
-                          {sortedContacts.map((contact) => (
-                            <div
-                              key={contact.id}
-                              className={cn(
-                                "flex items-center gap-3 p-2 rounded-lg cursor-pointer hover:bg-white/5",
-                                contact.unreadCount > 0 && "bg-white/5",
-                              )}
-                              onClick={() => handleOpenChat(contact.id)}
-                            >
+                        return (
+                          <div
+                            key={chat.id}
+                            onClick={() => setActiveChat(chat.id)}
+                            className={cn(
+                              "p-3 cursor-pointer hover:bg-white/5 transition-colors",
+                              activeChat === chat.id && "bg-white/10",
+                            )}
+                          >
+                            <div className="flex items-center gap-3">
                               <div className="relative">
-                                <Avatar>
-                                  <AvatarImage src={contact.avatar || "/placeholder.svg"} />
-                                  <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
+                                <Avatar className="h-12 w-12">
+                                  <AvatarImage src={otherParticipantAvatar || "/placeholder.svg"} />
+                                  <AvatarFallback className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white">
+                                    {otherParticipantName.charAt(0)}
+                                  </AvatarFallback>
                                 </Avatar>
                                 <div
                                   className={cn(
-                                    "absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background",
-                                    getStatusColor(contact.status),
+                                    "absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-900",
+                                    getStatusColor("online"),
                                   )}
                                 />
                               </div>
+
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between">
-                                  <div className="font-medium truncate flex items-center gap-1">
-                                    {contact.name}
-                                    <Badge variant="outline" className="h-4 px-1 text-[10px] font-normal">
-                                      {getContactTypeIcon(contact.type)}
-                                    </Badge>
+                                  <h4 className="text-white font-medium truncate">{otherParticipantName}</h4>
+                                  <div className="flex items-center gap-1">
+                                    {chat.starred && <Star className="h-3 w-3 text-yellow-400 fill-current" />}
+                                    {chat.lastMessage && (
+                                      <span className="text-xs text-gray-400">
+                                        {formatTimestamp(chat.lastMessage.timestamp)}
+                                      </span>
+                                    )}
                                   </div>
-                                  <span className="text-xs text-gray-400">
-                                    {contact.lastMessage ? formatTime(contact.lastMessage.timestamp) : ""}
-                                  </span>
                                 </div>
                                 <div className="flex items-center justify-between">
-                                  <p className="text-sm truncate text-gray-400 max-w-[180px]">
-                                    {contact.lastMessage?.isFromMe && "Tú: "}
-                                    {contact.lastMessage?.content || ""}
+                                  <p className="text-sm text-gray-400 truncate">
+                                    {chat.lastMessage ? chat.lastMessage.content : "Nuevo chat"}
                                   </p>
-                                  {contact.unreadCount > 0 ? (
-                                    <Badge className="bg-red-500 text-white h-5 min-w-5 flex items-center justify-center p-0 text-xs">
-                                      {contact.unreadCount}
-                                    </Badge>
-                                  ) : (
-                                    contact.lastMessage?.isFromMe && (
-                                      <div className="text-xs">
-                                        {getStatusIcon(messages[contact.id]?.slice(-1)[0]?.status || "sent")}
-                                      </div>
-                                    )
+                                  {chat.unreadCount > 0 && (
+                                    <Badge className="bg-cyan-500 text-xs">{chat.unreadCount}</Badge>
                                   )}
                                 </div>
                               </div>
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </ScrollArea>
-                  </>
-                ) : (
-                  <>
-                    {/* Conversación activa */}
-                    <div className="flex items-center justify-between p-2 border-b border-white/10">
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={activeContact?.avatar || "/placeholder.svg"} />
-                          <AvatarFallback>{activeContact?.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium text-sm">{activeContact?.name}</div>
-                          <div className="text-xs text-gray-400 flex items-center gap-1">
-                            <div
-                              className={cn(
-                                "h-1.5 w-1.5 rounded-full",
-                                getStatusColor(activeContact?.status || "offline"),
-                              )}
-                            />
-                            {activeContact?.status === "online"
-                              ? "En línea"
-                              : "Último acceso " + formatTime(activeContact?.lastSeen || new Date())}
                           </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </ScrollArea>
+              </div>
+
+              {/* Área de chat */}
+              <div className="flex-1 flex flex-col">
+                {activeChat_data ? (
+                  <>
+                    {/* Header del chat */}
+                    <div className="p-4 border-b border-white/10 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage
+                              src={
+                                activeChat_data.participantAvatars[
+                                  activeChat_data.participants.findIndex((p) => p !== user?.id)
+                                ] || "/placeholder.svg"
+                              }
+                            />
+                            <AvatarFallback className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white">
+                              {(
+                                activeChat_data.participantNames[
+                                  activeChat_data.participants.findIndex((p) => p !== user?.id)
+                                ] || "U"
+                              ).charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div
+                            className={cn(
+                              "absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-900",
+                              getStatusColor("online"),
+                            )}
+                          />
+                        </div>
+                        <div>
+                          <h4 className="text-white font-medium">
+                            {activeChat_data.participantNames[
+                              activeChat_data.participants.findIndex((p) => p !== user?.id)
+                            ] || "Usuario"}
+                          </h4>
+                          <p className="text-xs text-green-400">En línea</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:bg-white/5">
+
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" className="text-white hover:bg-white/10">
                           <Phone className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:bg-white/5">
+                        <Button variant="ghost" size="sm" className="text-white hover:bg-white/10">
                           <Video className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:bg-white/5">
-                          <Info className="h-4 w-4" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="text-white hover:bg-white/10">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="bg-gray-800 border-gray-700">
+                            <DropdownMenuItem>
+                              <Star className="h-4 w-4 mr-2" />
+                              Destacar chat
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Archive className="h-4 w-4 mr-2" />
+                              Archivar
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-red-400">
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Eliminar chat
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-white hover:bg-white/10 h-8 w-8 p-0"
+                            onClick={() => setIsMinimized(true)}
+                          >
+                            <Minimize2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-white hover:bg-white/10 h-8 w-8 p-0"
+                            onClick={() => setIsOpen(false)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
 
                     {/* Mensajes */}
                     <ScrollArea className="flex-1 p-4">
-                      <div className="space-y-4">
-                        {chatMessages.map((msg, index) => {
-                          const isFromMe = msg.senderId === userId
-                          const showAvatar =
-                            !isFromMe && (index === 0 || chatMessages[index - 1].senderId !== msg.senderId)
-
-                          return (
-                            <div key={msg.id} className={cn("flex", isFromMe ? "justify-end" : "justify-start")}>
-                              {!isFromMe && showAvatar && (
-                                <Avatar className="h-8 w-8 mr-2 mt-1">
-                                  <AvatarImage src={activeContact?.avatar || "/placeholder.svg"} />
-                                  <AvatarFallback>{activeContact?.name.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                              )}
-
-                              {!isFromMe && !showAvatar && <div className="w-10" />}
-
-                              <div
-                                className={cn(
-                                  "max-w-[70%] rounded-lg p-3",
-                                  isFromMe
-                                    ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white"
-                                    : "bg-white/10 text-gray-100",
-                                )}
-                              >
-                                <p className="text-sm">{msg.content}</p>
-                                <div className="flex items-center justify-end gap-1 mt-1">
-                                  <span className="text-xs opacity-70">{formatTime(msg.timestamp)}</span>
-                                  {isFromMe && <span className="text-xs">{getStatusIcon(msg.status)}</span>}
+                      {activeChatMessages.length === 0 ? (
+                        <div className="text-center py-12">
+                          <div className="text-6xl mb-4">🎬</div>
+                          <h3 className="text-white font-bold text-lg mb-2">¡Acción! 🎭</h3>
+                          <p className="text-gray-400 mb-4">
+                            Este chat está esperando su primera línea...
+                            <br />
+                            ¡Sé el protagonista y rompe el hielo! ❄️
+                          </p>
+                          <div className="space-y-2 text-sm text-gray-500">
+                            <div className="flex items-center justify-center gap-2">
+                              <span>👋</span>
+                              <span>Di "¡Hola!" para empezar</span>
+                            </div>
+                            <div className="flex items-center justify-center gap-2">
+                              <span>🤝</span>
+                              <span>Pregunta sobre productos</span>
+                            </div>
+                            <div className="flex items-center justify-center gap-2">
+                              <span>💡</span>
+                              <span>Comparte ideas geniales</span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {activeChatMessages.map((message) => {
+                            const isOwn = message.senderId === user?.id
+                            return (
+                              <div key={message.id} className={cn("flex", isOwn ? "justify-end" : "justify-start")}>
+                                <div className={cn("max-w-xs lg:max-w-md", isOwn ? "order-2" : "order-1")}>
+                                  <div
+                                    className={cn(
+                                      "px-4 py-2 rounded-lg",
+                                      isOwn
+                                        ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white"
+                                        : "bg-white/10 text-white",
+                                    )}
+                                  >
+                                    <p className="text-sm">{message.content}</p>
+                                  </div>
+                                  <div
+                                    className={cn(
+                                      "flex items-center gap-1 mt-1",
+                                      isOwn ? "justify-end" : "justify-start",
+                                    )}
+                                  >
+                                    <span className="text-xs text-gray-400">{formatTimestamp(message.timestamp)}</span>
+                                    {isOwn && (
+                                      <div className="flex items-center">
+                                        {message.read ? (
+                                          <CheckCheck className="h-3 w-3 text-blue-400" />
+                                        ) : (
+                                          <Check className="h-3 w-3 text-gray-400" />
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          )
-                        })}
-                        <div ref={messagesEndRef} />
-                      </div>
+                            )
+                          })}
+                          <div ref={messagesEndRef} />
+                        </div>
+                      )}
                     </ScrollArea>
 
                     {/* Input de mensaje */}
-                    <div className="p-3 border-t border-white/10">
-                      <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" className="h-9 w-9 text-gray-400 hover:bg-white/5">
-                          <Paperclip className="h-5 w-5" />
-                        </Button>
-                        <Input
-                          placeholder="Escribe un mensaje..."
-                          className="flex-1 bg-white/5"
-                          value={message}
-                          onChange={(e) => setMessage(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) {
-                              e.preventDefault()
-                              handleSendMessage()
-                            }
-                          }}
-                        />
-                        <Button variant="ghost" size="icon" className="h-9 w-9 text-gray-400 hover:bg-white/5">
-                          <ImageIcon className="h-5 w-5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-9 w-9 text-gray-400 hover:bg-white/5">
-                          <Smile className="h-5 w-5" />
-                        </Button>
+                    <div className="p-4 border-t border-white/10">
+                      <div className="flex items-end gap-2">
+                        <div className="flex-1 relative">
+                          <Textarea
+                            ref={inputRef}
+                            placeholder="Escribe un mensaje..."
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            className="bg-white/5 border-white/20 text-white resize-none min-h-[40px] max-h-[120px] pr-20"
+                            rows={1}
+                          />
+                          <div className="absolute right-2 bottom-2 flex items-center gap-1">
+                            <Button variant="ghost" size="sm" className="text-gray-400 hover:bg-white/10">
+                              <Paperclip className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" className="text-gray-400 hover:bg-white/10">
+                              <Smile className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
                         <Button
-                          size="icon"
-                          className="h-9 w-9 bg-gradient-to-r from-cyan-500 to-blue-500 hover:opacity-90"
                           onClick={handleSendMessage}
-                          disabled={!message.trim()}
+                          disabled={!newMessage.trim()}
+                          className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600"
                         >
                           <Send className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
                   </>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-8xl mb-6">💬</div>
+                      <h3 className="text-white font-bold text-2xl mb-3">¡Bienvenido al Chat! 🎉</h3>
+                      <p className="text-gray-400 mb-6 max-w-md">
+                        Selecciona una conversación para empezar a chatear
+                        <br />o crea una nueva para conectar con alguien increíble
+                      </p>
+                      <Button
+                        onClick={() => setShowNewChatModal(true)}
+                        className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Nuevo Chat
+                      </Button>
+                    </div>
+                  </div>
                 )}
-              </CardContent>
-            </>
+              </div>
+
+              {/* Modal para nuevo chat */}
+              {showNewChatModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                  <Card className="w-96 bg-gray-900 border-white/10">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-white">Nuevo Chat</CardTitle>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowNewChatModal(false)}
+                          className="text-white hover:bg-white/10"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {contacts.map((contact) => (
+                          <div
+                            key={contact.id}
+                            onClick={() => createNewChat(contact.id)}
+                            className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 cursor-pointer transition-colors"
+                          >
+                            <div className="relative">
+                              <Avatar className="h-10 w-10">
+                                <AvatarImage src={contact.avatar || "/placeholder.svg"} />
+                                <AvatarFallback className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white">
+                                  {contact.name.charAt(0)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div
+                                className={cn(
+                                  "absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-900",
+                                  getStatusColor(contact.status),
+                                )}
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="text-white font-medium">{contact.name}</h4>
+                              <p className="text-xs text-gray-400 capitalize">{contact.type}</p>
+                            </div>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-xs",
+                                contact.type === "creator" && "border-purple-400 text-purple-400",
+                                contact.type === "printer" && "border-blue-400 text-blue-400",
+                                contact.type === "support" && "border-green-400 text-green-400",
+                              )}
+                            >
+                              {contact.type}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+            </div>
           )}
-        </Card>
+        </div>
       )}
     </>
   )
