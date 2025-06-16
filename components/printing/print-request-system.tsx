@@ -9,8 +9,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { MapPin, Star, Clock, Package, MessageCircle } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { MapPin, Star, Clock, Package, MessageCircle, ArrowLeft } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 interface PrinterType {
   id: string
@@ -68,38 +68,6 @@ const samplePrinters: PrinterType[] = [
     online: false,
     completedOrders: 892,
   },
-  {
-    id: "3",
-    name: "3D Solutions",
-    avatar: "/placeholder.svg?height=50&width=50",
-    rating: 4.8,
-    reviews: 156,
-    location: "Valencia, España",
-    distance: "8.7 km",
-    pricePerGram: 0.18,
-    materials: ["PLA", "ABS", "PETG", "TPU", "Resina", "Metal Fill"],
-    maxSize: "400x400x500mm",
-    turnaround: "3-5 días",
-    verified: true,
-    online: true,
-    completedOrders: 567,
-  },
-  {
-    id: "4",
-    name: "PrintMaster",
-    avatar: "/placeholder.svg?height=50&width=50",
-    rating: 4.6,
-    reviews: 98,
-    location: "Sevilla, España",
-    distance: "12.4 km",
-    pricePerGram: 0.1,
-    materials: ["PLA", "ABS"],
-    maxSize: "200x200x250mm",
-    turnaround: "4-6 días",
-    verified: false,
-    online: true,
-    completedOrders: 234,
-  },
 ]
 
 const materials = ["PLA", "ABS", "PETG", "TPU", "Nylon", "ASA", "PC", "Wood Fill", "Metal Fill", "Resina"]
@@ -112,6 +80,7 @@ const qualities = [
 ]
 
 export function PrintRequestSystem({ modelId, modelTitle, modelImage }: PrintRequestSystemProps) {
+  const router = useRouter()
   const [selectedPrinter, setSelectedPrinter] = useState<PrinterType | null>(null)
   const [printSettings, setPrintSettings] = useState({
     material: "",
@@ -122,10 +91,9 @@ export function PrintRequestSystem({ modelId, modelTitle, modelImage }: PrintReq
     supports: false,
     notes: "",
   })
-  const [estimatedWeight, setEstimatedWeight] = useState(25) // gramos estimados
+  const [estimatedWeight] = useState(25)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [sortBy, setSortBy] = useState("distance")
-  const { toast } = useToast()
 
   const sortedPrinters = [...samplePrinters].sort((a, b) => {
     switch (sortBy) {
@@ -135,7 +103,7 @@ export function PrintRequestSystem({ modelId, modelTitle, modelImage }: PrintReq
         return b.rating - a.rating
       case "turnaround":
         return Number.parseInt(a.turnaround) - Number.parseInt(b.turnaround)
-      default: // distance
+      default:
         return Number.parseFloat(a.distance) - Number.parseFloat(b.distance)
     }
   })
@@ -148,53 +116,30 @@ export function PrintRequestSystem({ modelId, modelTitle, modelImage }: PrintReq
 
   const handleSubmitRequest = async () => {
     if (!selectedPrinter || !printSettings.material || !printSettings.color) {
-      toast({
-        title: "Campos requeridos",
-        description: "Por favor completa todos los campos obligatorios",
-        variant: "destructive",
-      })
+      alert("Por favor completa todos los campos obligatorios")
       return
     }
 
     setIsSubmitting(true)
-
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-
-      toast({
-        title: "¡Solicitud enviada!",
-        description: `Tu solicitud fue enviada a ${selectedPrinter.name}. Te contactarán pronto.`,
-      })
-
-      // Reset form
-      setSelectedPrinter(null)
-      setPrintSettings({
-        material: "",
-        color: "",
-        quality: "normal",
-        quantity: 1,
-        infill: 20,
-        supports: false,
-        notes: "",
-      })
-    } catch (error) {
-      toast({
-        title: "Error al enviar",
-        description: "Hubo un problema enviando tu solicitud",
-        variant: "destructive",
-      })
-    } finally {
-      setIsSubmitting(false)
-    }
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+    alert(`Solicitud enviada a ${selectedPrinter.name}`)
+    setIsSubmitting(false)
   }
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-8">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent mb-2">
-          Solicitar Impresión 3D
-        </h1>
-        <p className="text-gray-400">Encuentra el impresor perfecto para tu modelo</p>
+      {/* Header */}
+      <div className="flex items-center gap-4 mb-6">
+        <Button variant="ghost" size="sm" onClick={() => router.back()} className="text-white hover:bg-white/10">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Volver
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent">
+            Solicitar Impresión 3D
+          </h1>
+          <p className="text-gray-400">Encuentra el impresor perfecto para tu modelo</p>
+        </div>
       </div>
 
       {/* Modelo a imprimir */}
@@ -232,9 +177,6 @@ export function PrintRequestSystem({ modelId, modelTitle, modelImage }: PrintReq
                 </SelectItem>
                 <SelectItem value="rating" className="text-white hover:bg-gray-700">
                   Mejor Valorado
-                </SelectItem>
-                <SelectItem value="turnaround" className="text-white hover:bg-gray-700">
-                  Más Rápido
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -294,11 +236,6 @@ export function PrintRequestSystem({ modelId, modelTitle, modelImage }: PrintReq
                               {material}
                             </Badge>
                           ))}
-                          {printer.materials.length > 4 && (
-                            <Badge variant="secondary" className="text-xs">
-                              +{printer.materials.length - 4}
-                            </Badge>
-                          )}
                         </div>
                         <div className="text-right">
                           <div className="text-cyan-400 font-bold">${calculatePrice(printer)}</div>
@@ -403,36 +340,6 @@ export function PrintRequestSystem({ modelId, modelTitle, modelImage }: PrintReq
               </div>
 
               <div>
-                <Label htmlFor="infill" className="text-gray-300">
-                  Relleno (%)
-                </Label>
-                <Input
-                  id="infill"
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={printSettings.infill}
-                  onChange={(e) =>
-                    setPrintSettings((prev) => ({ ...prev, infill: Number.parseInt(e.target.value) || 20 }))
-                  }
-                  className="bg-gray-700 border-gray-600 text-white"
-                />
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="supports"
-                  checked={printSettings.supports}
-                  onChange={(e) => setPrintSettings((prev) => ({ ...prev, supports: e.target.checked }))}
-                  className="rounded border-gray-600 bg-gray-700"
-                />
-                <Label htmlFor="supports" className="text-gray-300">
-                  Requiere soportes
-                </Label>
-              </div>
-
-              <div>
                 <Label htmlFor="notes" className="text-gray-300">
                   Notas adicionales
                 </Label>
@@ -440,7 +347,7 @@ export function PrintRequestSystem({ modelId, modelTitle, modelImage }: PrintReq
                   id="notes"
                   value={printSettings.notes}
                   onChange={(e) => setPrintSettings((prev) => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Instrucciones especiales, preferencias de acabado, etc."
+                  placeholder="Instrucciones especiales..."
                   className="bg-gray-700 border-gray-600 text-white"
                 />
               </div>
@@ -463,33 +370,6 @@ export function PrintRequestSystem({ modelId, modelTitle, modelImage }: PrintReq
                   <div>
                     <p className="text-white font-medium">{selectedPrinter.name}</p>
                     <p className="text-gray-400 text-sm">{selectedPrinter.location}</p>
-                  </div>
-                </div>
-
-                <Separator className="bg-gray-700" />
-
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">Material:</span>
-                    <span className="text-white">{printSettings.material || "No seleccionado"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">Color:</span>
-                    <span className="text-white">{printSettings.color || "No seleccionado"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">Calidad:</span>
-                    <span className="text-white">
-                      {qualities.find((q) => q.value === printSettings.quality)?.label}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">Cantidad:</span>
-                    <span className="text-white">{printSettings.quantity}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">Tiempo estimado:</span>
-                    <span className="text-white">{selectedPrinter.turnaround}</span>
                   </div>
                 </div>
 

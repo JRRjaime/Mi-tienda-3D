@@ -4,8 +4,9 @@ import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { MessageSquare, BarChart3, TrendingUp, MessageCircle, X } from "lucide-react"
+import { MessageSquare, BarChart3, TrendingUp, MessageCircle, X, ShoppingCart } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import { useEnhancedCart } from "@/contexts/enhanced-cart-context"
 
 export function DualFAB() {
   const [isExpanded, setIsExpanded] = useState(false)
@@ -14,6 +15,9 @@ export function DualFAB() {
 
   // Simular datos de chat (esto vendría del contexto real)
   // const unreadMessages = 3
+
+  const { items } = useEnhancedCart()
+  const cartItemCount = items.reduce((sum, item) => sum + item.quantity, 0)
 
   const toggleExpanded = () => {
     setIsExpanded(!isExpanded)
@@ -124,6 +128,35 @@ export function DualFAB() {
               className="flex flex-col gap-3"
             >
               {/* Botón Analytics */}
+              <motion.div
+                initial={{ scale: 0, x: 20 }}
+                animate={{ scale: 1, x: 0 }}
+                exit={{ scale: 0, x: 20 }}
+                transition={{ delay: 0.15 }}
+              >
+                <Link href="/checkout">
+                  <Button
+                    size="lg"
+                    onClick={handleAnalyticsClick}
+                    className="h-12 w-12 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg hover:shadow-xl transition-all duration-300 group relative"
+                  >
+                    <ShoppingCart className="h-5 w-5" />
+
+                    {/* Badge del carrito */}
+                    {cartItemCount > 0 && (
+                      <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-xs flex items-center justify-center p-0 border-2 border-white">
+                        {cartItemCount > 99 ? "99+" : cartItemCount}
+                      </Badge>
+                    )}
+
+                    {/* Tooltip */}
+                    <div className="absolute right-14 top-1/2 -translate-y-1/2 bg-black/80 text-white px-3 py-2 rounded-lg text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                      🛒 Carrito ({cartItemCount})
+                      <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 w-2 h-2 bg-black/80 rotate-45" />
+                    </div>
+                  </Button>
+                </Link>
+              </motion.div>
               <Link href="/analytics">
                 <motion.div
                   initial={{ scale: 0, x: 20 }}

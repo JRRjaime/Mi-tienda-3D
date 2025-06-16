@@ -5,7 +5,6 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useOptimizedHeader } from "@/hooks/use-optimized-header"
 import { HeaderLogo } from "./header-logo"
 import { HeaderSearch } from "./header-search"
-import { HeaderCart } from "./header-cart"
 import { HeaderNavigation } from "./header-navigation"
 
 // Lazy load non-critical components
@@ -40,8 +39,7 @@ const OptimizedGlobalHeader = memo(() => {
           <nav className="flex items-center space-x-2">
             <HeaderNavigation />
 
-            {/* Cart with optimized counter */}
-            <HeaderCart />
+            {/* Cart removido - ahora está en el FAB */}
 
             {/* User Menu - Lazy loaded */}
             <Suspense fallback={<Skeleton className="h-9 w-9 rounded-md" />}>
