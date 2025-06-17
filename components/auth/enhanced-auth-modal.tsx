@@ -265,40 +265,6 @@ export function EnhancedAuthModal({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Autenticación Social */}
-        <SocialAuthButtons onSuccess={handleSocialSuccess} disabled={isLoading} />
-
-        {/* Botón de prueba rápida */}
-        <div className="mb-4">
-          <Button
-            onClick={handleDemoLogin}
-            disabled={isLoading}
-            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creando cuenta demo...
-              </>
-            ) : (
-              <>
-                <Zap className="mr-2 h-4 w-4" />
-                Prueba Rápida - Crear Usuario Demo
-              </>
-            )}
-          </Button>
-          <p className="text-xs text-center text-gray-500 mt-2">Crea automáticamente un usuario de prueba aleatorio</p>
-        </div>
-
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">O usa email y contraseña</span>
-          </div>
-        </div>
-
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "login" | "register")} className="mt-4">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="login">Iniciar Sesión</TabsTrigger>
@@ -580,6 +546,33 @@ export function EnhancedAuthModal({
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Autenticación Social - AHORA DESPUÉS DEL FORMULARIO */}
+        <div className="mt-6">
+          <SocialAuthButtons onSuccess={handleSocialSuccess} disabled={isLoading} />
+        </div>
+
+        {/* Botón de prueba rápida - AL FINAL */}
+        <div className="mt-4">
+          <Button
+            onClick={handleDemoLogin}
+            disabled={isLoading}
+            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creando cuenta demo...
+              </>
+            ) : (
+              <>
+                <Zap className="mr-2 h-4 w-4" />
+                Prueba Rápida - Crear Usuario Demo
+              </>
+            )}
+          </Button>
+          <p className="text-xs text-center text-gray-500 mt-2">Crea automáticamente un usuario de prueba aleatorio</p>
+        </div>
       </DialogContent>
     </Dialog>
   )
