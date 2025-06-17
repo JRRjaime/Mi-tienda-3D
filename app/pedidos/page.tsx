@@ -1,10 +1,21 @@
 "use client"
 
-import { OrderTrackingSystem } from "@/components/orders/order-tracking-system"
+import { RealOrderManagement } from "@/components/orders/real-order-management"
 import { useAuth } from "@/contexts/auth-context"
+import { useEffect, useState } from "react"
 
 export default function PedidosPage() {
   const { user } = useAuth()
+  const [userType, setUserType] = useState<"buyer" | "printer">("buyer")
+
+  useEffect(() => {
+    // Determinar el tipo de usuario basado en su perfil
+    if (user?.profileTypes?.includes("printer")) {
+      setUserType("printer")
+    } else {
+      setUserType("buyer")
+    }
+  }, [user])
 
   if (!user) {
     return (
@@ -20,7 +31,7 @@ export default function PedidosPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       <div className="container mx-auto px-4 py-8">
-        <OrderTrackingSystem userType={user.profileTypes || ["buyer"]} userId={user.id} />
+        <RealOrderManagement userType={userType} userId={user.id} />
       </div>
     </div>
   )
