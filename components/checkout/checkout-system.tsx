@@ -4,6 +4,7 @@ import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { useEnhancedCart } from "@/contexts/enhanced-cart-context"
+import { useIntegration } from "@/contexts/integration-context"
 import { ShippingForm } from "./shipping-form"
 import { PaymentMethods } from "./payment-methods"
 import { OrderSummary } from "./order-summary"
@@ -25,6 +26,7 @@ interface PaymentMethod {
 export function CheckoutSystem() {
   const router = useRouter()
   const { items, total, shippingAddress, setShippingAddress, clearCart } = useEnhancedCart()
+  const { triggerPurchaseComplete } = useIntegration()
 
   const [currentStep, setCurrentStep] = useState<CheckoutStep>("shipping")
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null)
@@ -70,30 +72,67 @@ export function CheckoutSystem() {
     setIsProcessing(true)
 
     try {
-      // Simular procesamiento del pedido
-      await new Promise((resolve) => setTimeout(resolve, 3000))
+      // Generar ID único para el pedido
+      const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-      // Crear pedido
-      const orderData = {
+      // Simular procesamiento del pago con Stripe
+      const paymentData = {
+        amount: Math.round(total * 100), // Stripe usa centavos
+        currency: "usd",
+        orderId,
+        buyerId: "user_123", // En producción, obtener del contexto de auth
+        sellerId: "seller_456", // En producción, obtener de los items
+        buyerName: shippingAddress.fullName,
+        sellerName: "Vendedor Demo", // En producción, obtener de los items
         items,
         shippingAddress,
         paymentMethod,
-        total,
-        timestamp: new Date().toISOString(),
       }
 
-      console.log("Order created:", orderData)
+      console.log("🔄 Processing payment with data:", paymentData)
 
-      // Limpiar carrito
-      clearCart()
+      // Simular llamada a Stripe
+      await new Promise((resolve) => setTimeout(resolve, 3000))
 
-      toast({
-        title: "🎉 ¡Pedido realizado!",
-        description: "Tu pedido ha sido procesado exitosamente",
-      })
+      // Simular respuesta exitosa de Stripe
+      const paymentResult = {
+        success: true,
+        paymentIntentId: `pi_${Date.now()}`,
+        orderId,
+      }
 
-      // Redirigir a página de éxito
-      router.push("/checkout/success")
+      if (paymentResult.success) {
+        // 🎉 Disparar evento de compra completada
+        triggerPurchaseComplete({
+          orderId: paymentResult.orderId,
+          buyerId: paymentData.buyerId,
+          buyerName: paymentData.buyerName,
+          sellerId: paymentData.sellerId,
+          sellerName: paymentData.sellerName,
+          items: items.map((item) => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            image: item.image || "/placeholder.svg",
+          })),
+          total,
+          shippingAddress,
+        })
+
+        // Limpiar carrito
+        clearCart()
+
+        toast({
+          title: "🎉 ¡Pedido realizado!",
+          description: `Tu pedido #${paymentResult.orderId} ha sido procesado exitosamente`,
+        })
+
+        // Redirigir a página de éxito
+        router.push(`/checkout/success?orderId=${paymentResult.orderId}`)
+      } else {
+        throw new Error("Payment failed")
+      }
     } catch (error) {
       console.error("Error processing order:", error)
       toast({

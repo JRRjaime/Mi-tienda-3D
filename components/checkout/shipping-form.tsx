@@ -146,7 +146,7 @@ export function ShippingForm({ initialData, onSubmit }: ShippingFormProps) {
                 {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="city">Ciudad *</Label>
                   <Input
@@ -157,26 +157,6 @@ export function ShippingForm({ initialData, onSubmit }: ShippingFormProps) {
                     className={errors.city ? "border-red-500" : ""}
                   />
                   {errors.city && <p className="text-red-500 text-sm">{errors.city}</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="state">Estado *</Label>
-                  <Select value={formData.state} onValueChange={(value) => handleInputChange("state", value)}>
-                    <SelectTrigger className={errors.state ? "border-red-500" : ""}>
-                      <SelectValue placeholder="Seleccionar estado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="CDMX">Ciudad de México</SelectItem>
-                      <SelectItem value="Jalisco">Jalisco</SelectItem>
-                      <SelectItem value="Nuevo León">Nuevo León</SelectItem>
-                      <SelectItem value="Puebla">Puebla</SelectItem>
-                      <SelectItem value="Guanajuato">Guanajuato</SelectItem>
-                      <SelectItem value="Veracruz">Veracruz</SelectItem>
-                      <SelectItem value="Yucatán">Yucatán</SelectItem>
-                      <SelectItem value="Quintana Roo">Quintana Roo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {errors.state && <p className="text-red-500 text-sm">{errors.state}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -199,11 +179,52 @@ export function ShippingForm({ initialData, onSubmit }: ShippingFormProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="México">México</SelectItem>
-                    <SelectItem value="Estados Unidos">Estados Unidos</SelectItem>
-                    <SelectItem value="Canadá">Canadá</SelectItem>
+                    {/* España */}
+                    <SelectItem value="España">🇪🇸 España</SelectItem>
+
+                    {/* Norteamérica */}
+                    <SelectItem value="Estados Unidos">🇺🇸 Estados Unidos</SelectItem>
+                    <SelectItem value="Canadá">🇨🇦 Canadá</SelectItem>
+                    <SelectItem value="México">🇲🇽 México</SelectItem>
+
+                    {/* Unión Europea */}
+                    <SelectItem value="Alemania">🇩🇪 Alemania</SelectItem>
+                    <SelectItem value="Francia">🇫🇷 Francia</SelectItem>
+                    <SelectItem value="Italia">🇮🇹 Italia</SelectItem>
+                    <SelectItem value="Países Bajos">🇳🇱 Países Bajos</SelectItem>
+                    <SelectItem value="Polonia">🇵🇱 Polonia</SelectItem>
+                    <SelectItem value="Bélgica">🇧🇪 Bélgica</SelectItem>
+                    <SelectItem value="Austria">🇦🇹 Austria</SelectItem>
+                    <SelectItem value="Suecia">🇸🇪 Suecia</SelectItem>
+                    <SelectItem value="Dinamarca">🇩🇰 Dinamarca</SelectItem>
+                    <SelectItem value="Finlandia">🇫🇮 Finlandia</SelectItem>
+                    <SelectItem value="Irlanda">🇮🇪 Irlanda</SelectItem>
+                    <SelectItem value="Portugal">🇵🇹 Portugal</SelectItem>
+                    <SelectItem value="República Checa">🇨🇿 República Checa</SelectItem>
+                    <SelectItem value="Hungría">🇭🇺 Hungría</SelectItem>
+                    <SelectItem value="Grecia">🇬🇷 Grecia</SelectItem>
+                    <SelectItem value="Rumania">🇷🇴 Rumania</SelectItem>
+                    <SelectItem value="Bulgaria">🇧🇬 Bulgaria</SelectItem>
+                    <SelectItem value="Croacia">🇭🇷 Croacia</SelectItem>
+                    <SelectItem value="Eslovaquia">🇸🇰 Eslovaquia</SelectItem>
+                    <SelectItem value="Eslovenia">🇸🇮 Eslovenia</SelectItem>
+                    <SelectItem value="Estonia">🇪🇪 Estonia</SelectItem>
+                    <SelectItem value="Letonia">🇱🇻 Letonia</SelectItem>
+                    <SelectItem value="Lituania">🇱🇹 Lituania</SelectItem>
+                    <SelectItem value="Luxemburgo">🇱🇺 Luxemburgo</SelectItem>
+                    <SelectItem value="Malta">🇲🇹 Malta</SelectItem>
+                    <SelectItem value="Chipre">🇨🇾 Chipre</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Nota informativa */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-700">
+                <p className="text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                  <Truck className="h-4 w-4" />
+                  Los envíos físicos están disponibles para estos países. Los productos digitales se entregan
+                  instantáneamente sin restricciones geográficas.
+                </p>
               </div>
             </div>
 
