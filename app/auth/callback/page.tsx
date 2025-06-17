@@ -17,6 +17,7 @@ export default function AuthCallbackPage() {
         return
       }
 
+      try {
         const { data, error } = await supabase.auth.getSession()
 
         if (error) {
