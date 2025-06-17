@@ -136,48 +136,57 @@ export function ModelOptimizer() {
     // Simular proceso de optimización
     const steps = [
       "Analizando geometría del modelo...",
+      "Detectando errores de malla...",
       "Calculando orientación óptima...",
+      "Optimizando topología...",
+      "Reduciendo polígonos innecesarios...",
       "Optimizando soportes...",
+      "Calculando relleno óptimo...",
       "Ajustando configuración de impresión...",
-      "Generando estadísticas...",
+      "Validando integridad del modelo...",
+      "Generando estadísticas finales...",
     ]
 
     for (let i = 0; i < steps.length; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      await new Promise((resolve) => setTimeout(resolve, 800 + Math.random() * 400))
       setOptimizationProgress(((i + 1) / steps.length) * 100)
+      // Mostrar el paso actual en la UI
     }
 
     // Simular resultados
     const mockResult: OptimizationResult = {
       originalStats: {
-        volume: 15.6,
-        weight: 19.3,
-        printTime: 4.5,
-        materialCost: 0.48,
-        supportMaterial: 2.1,
+        volume: 15.6 + Math.random() * 10,
+        weight: 19.3 + Math.random() * 15,
+        printTime: 4.5 + Math.random() * 3,
+        materialCost: 0.48 + Math.random() * 0.3,
+        supportMaterial: 2.1 + Math.random() * 1.5,
       },
       optimizedStats: {
-        volume: 12.8,
-        weight: 15.8,
-        printTime: 3.2,
-        materialCost: 0.32,
-        supportMaterial: 1.2,
+        volume: 12.8 + Math.random() * 8,
+        weight: 15.8 + Math.random() * 10,
+        printTime: 3.2 + Math.random() * 2,
+        materialCost: 0.32 + Math.random() * 0.2,
+        supportMaterial: 1.2 + Math.random() * 0.8,
       },
       improvements: {
-        timeSaved: 28.9,
-        materialSaved: 18.1,
-        costSaved: 33.3,
-        qualityScore: 92,
+        timeSaved: 20 + Math.random() * 20,
+        materialSaved: 15 + Math.random() * 15,
+        costSaved: 25 + Math.random() * 20,
+        qualityScore: 85 + Math.random() * 15,
       },
       warnings: [
         "El modelo tiene paredes muy delgadas que podrían causar problemas de impresión",
         "Se recomienda añadir soportes manuales en la parte inferior",
-      ],
+        "Algunas superficies podrían beneficiarse de un acabado más suave",
+      ].slice(0, Math.floor(Math.random() * 3) + 1),
       recommendations: [
         "Rotar el modelo 15° para reducir la necesidad de soportes",
         "Aumentar el grosor de pared a 1.2mm para mejor resistencia",
         "Usar relleno hexagonal para mejor relación resistencia/peso",
-      ],
+        "Considerar dividir el modelo en partes más pequeñas",
+        "Aplicar suavizado a superficies curvas",
+      ].slice(0, Math.floor(Math.random() * 3) + 2),
     }
 
     setOptimizationResult(mockResult)

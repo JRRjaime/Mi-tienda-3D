@@ -62,9 +62,9 @@ interface AnalyticsContextType {
   getPriceRecommendation: (modelId: string) => PriceOptimization | null
   getMarketInsights: (category: string) => MarketTrend | null
   calculateROI: (modelId: string) => ModelROI | null
+  isLoading: boolean
 }
 
-// Datos mock realistas
 const generateMockAnalytics = (): AdvancedAnalytics => ({
   marketTrends: [
     {
@@ -144,11 +144,7 @@ const generateMockAnalytics = (): AdvancedAnalytics => ({
     confidence: 84,
     factors: ["Temporada navideña", "Lanzamiento anime", "Tendencia gaming"],
   },
-  competitorAnalysis: {
-    avgPrice: 16.45,
-    marketShare: 23.7,
-    topCompetitors: ["ModelMaster", "3DHub", "PrintCraft"],
-  },
+  competitorAnalysis: { avgPrice: 16.45, marketShare: 23.7, topCompetitors: ["ModelMaster", "3DHub", "PrintCraft"] },
 })
 
 const AnalyticsContext = createContext<AnalyticsContextType | undefined>(undefined)
@@ -156,6 +152,9 @@ const AnalyticsContext = createContext<AnalyticsContextType | undefined>(undefin
 export const useAnalytics = () => {
   const context = useContext(AnalyticsContext)
   if (context === undefined) {
+    // Devolver un estado por defecto o lanzar un error menos disruptivo si es preferible
+    // para componentes que podrían renderizarse antes de que el provider esté listo.
+    // Por ahora, mantenemos el error para identificar problemas de integración.
     throw new Error("useAnalytics debe ser usado dentro de un AnalyticsProvider")
   }
   return context
@@ -163,20 +162,53 @@ export const useAnalytics = () => {
 
 export function AnalyticsProvider({ children }: { children: ReactNode }) {
   const [analytics, setAnalytics] = useState<AdvancedAnalytics>(generateMockAnalytics())
-  const { user } = useAuth()
-  const { models } = usePlatformData()
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Actualizar analytics cada 30 segundos (simulado)
+  // Intentar obtener useAuth y usePlatformData de forma segura
+  const [auth, setAuth] = useState(null)
+  const [platformData, setPlatformData] = useState(null)
+
   useEffect(() => {
+    try {
+      setAuth(useAuth())
+    } catch (e) {
+      console.warn("AnalyticsProvider: AuthContext no disponible o con error.")
+    }
+    try {
+      setPlatformData(usePlatformData())
+    } catch (e) {
+      console.warn("AnalyticsProvider: PlatformDataContext no disponible o con error.")
+    }
+  }, [])
+
+  const authUser = auth?.user || null
+  const platformModels = platformData?.models || []
+
+  useEffect(() => {
+    // Simular carga de datos
+    setIsLoading(true)
+    const timer = setTimeout(() => {
+      setAnalytics(generateMockAnalytics()) // Generar nuevos datos mock o usar los existentes
+      setIsLoading(false)
+    }, 1000) // Simular delay de carga
+
+    // Actualizar analytics cada 30 segundos (simulado)
     const interval = setInterval(() => {
       setAnalytics(generateMockAnalytics())
     }, 30000)
 
-    return () => clearInterval(interval)
-  }, [])
+    return () => {
+      clearTimeout(timer)
+      clearInterval(interval)
+    }
+  }, [authUser, platformModels]) // Dependencias opcionales, si los datos de analytics dependen de ellas
 
   const refreshAnalytics = () => {
-    setAnalytics(generateMockAnalytics())
+    setIsLoading(true)
+    setTimeout(() => {
+      setAnalytics(generateMockAnalytics())
+      setIsLoading(false)
+    }, 500)
   }
 
   const getPriceRecommendation = (modelId: string) => {
@@ -199,6 +231,7 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
         getPriceRecommendation,
         getMarketInsights,
         calculateROI,
+        isLoading,
       }}
     >
       {children}

@@ -1,40 +1,8 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import type { Model3D, PlatformStats } from "@/types"
 
-// Tipos para los datos de la plataforma
-export interface PlatformStats {
-  totalModels: number
-  totalCreators: number
-  totalDownloads: number
-  totalUsers: number
-  totalPrinters: number
-  totalOrders: number
-}
-
-// Tipos para modelos
-export interface Model3D {
-  id: string
-  title: string
-  description: string
-  price: number
-  authorId: string
-  authorName: string
-  category: string
-  tags: string[]
-  imageUrl: string
-  fileUrl: string
-  downloads: number
-  likes: number
-  rating: number
-  reviews: number
-  createdAt: string
-  materials: string[]
-  printTime: string
-  difficulty: "Fácil" | "Intermedio" | "Avanzado"
-}
-
-// Tipos para el contexto
 interface PlatformDataContextType {
   stats: PlatformStats
   models: Model3D[]
@@ -46,13 +14,8 @@ interface PlatformDataContextType {
   updateStats: () => void
 }
 
-// EMPEZAR SIN MODELOS - Array vacío para que todo esté en 0
-const INITIAL_MODELS: Model3D[] = []
-
-// Crear el contexto
 const PlatformDataContext = createContext<PlatformDataContextType | undefined>(undefined)
 
-// Hook personalizado para usar el contexto
 export const usePlatformData = () => {
   const context = useContext(PlatformDataContext)
   if (context === undefined) {
@@ -61,7 +24,6 @@ export const usePlatformData = () => {
   return context
 }
 
-// Proveedor del contexto
 export function PlatformDataProvider({ children }: { children: ReactNode }) {
   const [models, setModels] = useState<Model3D[]>([])
   const [stats, setStats] = useState<PlatformStats>({
@@ -73,53 +35,40 @@ export function PlatformDataProvider({ children }: { children: ReactNode }) {
     totalOrders: 0,
   })
 
-  // Cargar datos del localStorage al inicializar
   useEffect(() => {
-    const storedModels = localStorage.getItem("platformModels")
-    const storedStats = localStorage.getItem("platformStats")
-
-    if (storedModels) {
-      try {
+    try {
+      const storedModels = localStorage.getItem("platformModels")
+      if (storedModels) {
         const parsedModels = JSON.parse(storedModels)
         setModels(parsedModels)
         updateStatsFromModels(parsedModels)
-      } catch (error) {
-        console.error("Error parsing stored models:", error)
-        setModels([])
-        updateStatsFromModels([])
       }
-    } else {
-      // Si no hay modelos guardados, empezar con array vacío
+    } catch (error) {
+      console.error("Error loading models from localStorage:", error)
       setModels([])
-      updateStatsFromModels([])
     }
   }, [])
 
-  // Función para actualizar estadísticas basadas en los modelos (empezando en 0)
   const updateStatsFromModels = (modelsList: Model3D[]) => {
-    const uniqueCreators = new Set(modelsList.map((m) => m.authorId)).size
+    const uniqueCreators = new Set(modelsList.map((m) => m.author.id)).size
     const totalDownloads = modelsList.reduce((sum, m) => sum + m.downloads, 0)
 
-    const newStats = {
+    const newStats: PlatformStats = {
       totalModels: modelsList.length,
       totalCreators: uniqueCreators,
       totalDownloads: totalDownloads,
-      totalUsers: uniqueCreators, // Solo contar usuarios reales que han subido modelos
-      totalPrinters: 0, // Empezar en 0, se incrementará cuando haya impresores activos
-      totalOrders: 0, // Empezar en 0, se incrementará con pedidos reales
+      totalUsers: uniqueCreators,
+      totalPrinters: 0,
+      totalOrders: 0,
     }
-
     setStats(newStats)
-    localStorage.setItem("platformStats", JSON.stringify(newStats))
   }
 
-  // Guardar modelos en localStorage cuando cambien
   useEffect(() => {
     localStorage.setItem("platformModels", JSON.stringify(models))
     updateStatsFromModels(models)
   }, [models])
 
-  // Función para añadir un nuevo modelo
   const addModel = (modelData: Omit<Model3D, "id" | "downloads" | "likes" | "rating" | "reviews" | "createdAt">) => {
     const newModel: Model3D = {
       ...modelData,
@@ -130,23 +79,19 @@ export function PlatformDataProvider({ children }: { children: ReactNode }) {
       reviews: 0,
       createdAt: new Date().toISOString(),
     }
-
     setModels((prev) => [...prev, newModel])
   }
 
-  // Función para incrementar descargas
   const incrementDownloads = (modelId: string) => {
     setModels((prev) =>
       prev.map((model) => (model.id === modelId ? { ...model, downloads: model.downloads + 1 } : model)),
     )
   }
 
-  // Función para incrementar likes
   const incrementLikes = (modelId: string) => {
     setModels((prev) => prev.map((model) => (model.id === modelId ? { ...model, likes: model.likes + 1 } : model)))
   }
 
-  // Función para añadir review
   const addReview = (modelId: string, rating: number) => {
     setModels((prev) =>
       prev.map((model) => {
@@ -156,7 +101,7 @@ export function PlatformDataProvider({ children }: { children: ReactNode }) {
           return {
             ...model,
             reviews: newReviewCount,
-            rating: Math.round(newRating * 10) / 10, // Redondear a 1 decimal
+            rating: Math.round(newRating * 10) / 10,
           }
         }
         return model
@@ -164,12 +109,10 @@ export function PlatformDataProvider({ children }: { children: ReactNode }) {
     )
   }
 
-  // Función para obtener modelos de un usuario
   const getUserModels = (userId: string) => {
-    return models.filter((model) => model.authorId === userId)
+    return models.filter((model) => model.author.id === userId)
   }
 
-  // Función para actualizar estadísticas manualmente
   const updateStats = () => {
     updateStatsFromModels(models)
   }

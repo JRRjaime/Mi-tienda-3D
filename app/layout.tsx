@@ -1,11 +1,12 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
 import "./globals.css"
+import { Inter } from "next/font/google"
 import { AppProviders } from "@/components/providers/app-providers"
-import { GlobalComponents } from "@/components/providers/global-components"
-import { CartIntegration } from "@/components/cart/cart-integration"
-import GlobalHeader from "@/components/layout/optimized-global-header"
+import { ConditionalHeader } from "@/components/layout/conditional-header"
+import { OptimizedFooter } from "@/components/layout/optimized-footer"
+import { ColorfulFloatingCart } from "@/components/cart/colorful-floating-cart"
+import { DualFAB } from "@/components/ui/dual-fab" // Añadir esta importación
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -31,11 +32,11 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <body className={inter.className}>
         <AppProviders>
-          {/* Solo UN header */}
-          <GlobalHeader />
+          <ConditionalHeader />
           {children}
-          <GlobalComponents />
-          <CartIntegration />
+          <ColorfulFloatingCart />
+          <DualFAB /> {/* Restaurar el DualFAB con analytics y chat */}
+          <OptimizedFooter />
         </AppProviders>
       </body>
     </html>
