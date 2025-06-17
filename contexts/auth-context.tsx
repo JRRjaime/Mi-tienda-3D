@@ -45,6 +45,7 @@ interface AuthContextType {
   logout: () => void
   updateUserPhoto: (photoUrl: string) => Promise<void>
   updateUserStats: (stats: Partial<User["stats"]>) => void
+  updateUserRole: (newRole: "user" | "creator" | "printer") => Promise<boolean>
 }
 
 // Función para generar perfil completamente en 0
@@ -721,6 +722,88 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user, isSupabaseEnabled, supabase],
   )
 
+  const updateUserRole = useCallback(
+    async (newRole: "user" | "creator" | "printer"): Promise<boolean> => {
+      if (!user) return false
+
+      try {
+        console.log(`🔄 Updating user role to: ${newRole}`)
+
+        // Generar nuevos datos de perfil para el nuevo rol
+        const profileData = generateCleanProfile(newRole)
+
+        if (isSupabaseEnabled && supabase) {
+          const { error } = await supabase
+            .from("profiles")
+            .update({
+              role: newRole,
+              interests: profileData.interests,
+              preferences: {
+                notifications: true,
+                newsletter: newRole !== "printer",
+                publicProfile: newRole !== "user",
+              },
+            })
+            .eq("id", user.id)
+
+          if (!error) {
+            const updatedUser = {
+              ...user,
+              role: newRole,
+              interests: profileData.interests,
+              preferences: {
+                notifications: true,
+                newsletter: newRole !== "printer",
+                publicProfile: newRole !== "user",
+              },
+            }
+            setUser(updatedUser)
+            localStorage.setItem("currentUser", JSON.stringify(updatedUser))
+            console.log("✅ Role updated in Supabase")
+
+            toast({
+              title: "Rol actualizado",
+              description: `Tu rol ha sido cambiado a ${newRole === "creator" ? "Creador" : newRole === "printer" ? "Impresor" : "Usuario"}`,
+            })
+
+            return true
+          }
+        } else {
+          const updatedUser = {
+            ...user,
+            role: newRole,
+            interests: profileData.interests,
+            preferences: {
+              notifications: true,
+              newsletter: newRole !== "printer",
+              publicProfile: newRole !== "user",
+            },
+          }
+          setUser(updatedUser)
+          localStorage.setItem("currentUser", JSON.stringify(updatedUser))
+          console.log("✅ Role updated in localStorage")
+
+          toast({
+            title: "Rol actualizado",
+            description: `Tu rol ha sido cambiado a ${newRole === "creator" ? "Creador" : newRole === "printer" ? "Impresor" : "Usuario"}`,
+          })
+
+          return true
+        }
+      } catch (error) {
+        console.error("❌ Update role error:", error)
+        toast({
+          title: "Error",
+          description: "No se pudo actualizar el rol. Intenta de nuevo.",
+          variant: "destructive",
+        })
+      }
+
+      return false
+    },
+    [user, isSupabaseEnabled, supabase, toast],
+  )
+
   // Inicialización optimizada
   useEffect(() => {
     const initSupabase = async () => {
@@ -997,6 +1080,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       updateUserPhoto,
       updateUserStats,
+      updateUserRole,
     }),
     [
       user,
@@ -1009,6 +1093,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       updateUserPhoto,
       updateUserStats,
+      updateUserRole,
     ],
   )
 
