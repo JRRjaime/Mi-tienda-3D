@@ -123,94 +123,100 @@ export function RealFileUploadSystem() {
   }, [])
 
   // Simular subida de archivo
-  const uploadFile = useCallback(async (file: File, type: "model" | "image"): Promise<UploadedFile> => {
-    const fileId = Date.now().toString() + Math.random()
+  const uploadFile = useCallback(
+    async (file: File, type: "model" | "image"): Promise<UploadedFile> => {
+      const fileId = Date.now().toString() + Math.random()
 
-    const uploadedFile: UploadedFile = {
-      id: fileId,
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      url: URL.createObjectURL(file),
-      preview: type === "image" ? URL.createObjectURL(file) : undefined,
-      uploadProgress: 0,
-      status: "uploading",
-    }
+      const uploadedFile: UploadedFile = {
+        id: fileId,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        url: URL.createObjectURL(file),
+        preview: type === "image" ? URL.createObjectURL(file) : undefined,
+        uploadProgress: 0,
+        status: "uploading",
+      }
 
-    // Simular progreso de subida
-    const updateProgress = () => {
-      setFiles((prev) =>
-        prev.map((f) => {
-          if (f.id === fileId) {
-            const newProgress = Math.min(f.uploadProgress + Math.random() * 30, 100)
+      // Simular progreso de subida
+      const updateProgress = () => {
+        setFiles((prev) =>
+          prev.map((f) => {
+            if (f.id === fileId) {
+              const newProgress = Math.min(f.uploadProgress + Math.random() * 30, 100)
+              return {
+                ...f,
+                uploadProgress: newProgress,
+                status: newProgress === 100 ? "completed" : "uploading",
+              }
+            }
+            return f
+          }),
+        )
+
+        setImages((prev) =>
+          prev.map((f) => {
+            if (f.id === fileId) {
+              const newProgress = Math.min(f.uploadProgress + Math.random() * 30, 100)
+              return {
+                ...f,
+                uploadProgress: newProgress,
+                status: newProgress === 100 ? "completed" : "uploading",
+              }
+            }
+            return f
+          }),
+        )
+      }
+
+      const progressInterval = setInterval(() => {
+        updateProgress()
+      }, 500)
+
+      // Validar archivo 3D si es necesario
+      if (type === "model") {
+        try {
+          const validation = await validate3DFile(file)
+          setValidationResults((prev) => ({ ...prev, [fileId]: validation }))
+
+          if (!validation.isValid) {
+            clearInterval(progressInterval)
             return {
-              ...f,
-              uploadProgress: newProgress,
-              status: newProgress === 100 ? "completed" : "uploading",
+              ...uploadedFile,
+              status: "error",
+              error: validation.errors.join(", "),
+              uploadProgress: 0,
             }
           }
-          return f
-        }),
-      )
-
-      setImages((prev) =>
-        prev.map((f) => {
-          if (f.id === fileId) {
-            const newProgress = Math.min(f.uploadProgress + Math.random() * 30, 100)
-            return {
-              ...f,
-              uploadProgress: newProgress,
-              status: newProgress === 100 ? "completed" : "uploading",
-            }
-          }
-          return f
-        }),
-      )
-    }
-
-    const progressInterval = setInterval(() => {
-      updateProgress()
-    }, 500)
-
-    // Validar archivo 3D si es necesario
-    if (type === "model") {
-      try {
-        const validation = await validate3DFile(file)
-        setValidationResults((prev) => ({ ...prev, [fileId]: validation }))
-
-        if (!validation.isValid) {
+        } catch (error) {
           clearInterval(progressInterval)
           return {
             ...uploadedFile,
             status: "error",
-            error: validation.errors.join(", "),
+            error: "Error validando archivo",
             uploadProgress: 0,
           }
         }
-      } catch (error) {
-        clearInterval(progressInterval)
-        return {
-          ...uploadedFile,
-          status: "error",
-          error: "Error validando archivo",
-          uploadProgress: 0,
-        }
       }
-    }
 
-    // Completar subida después de 3-5 segundos
-    setTimeout(() => {
-      clearInterval(progressInterval)
-      setFiles((prev) =>
-        prev.map((f) => (f.id === fileId ? { ...f, uploadProgress: 100, status: "completed" } : f)),
+      // Completar subida después de 3-5 segundos
+      setTimeout(
+        () => {
+          clearInterval(progressInterval)
+          setFiles((prev) =>
+            prev.map((f) => (f.id === fileId ? { ...f, uploadProgress: 100, status: "completed" } : f)),
+          )
+          setImages((prev) =>
+            prev.map((f) => (f.id === fileId ? { ...f, uploadProgress: 100, status: "completed" } : f)),
+          )
+        },
+        Math.random() * 2000 + 3000,
       )
-      setImages((prev) =>
-        prev.map((f) => (f.id === fileId ? { ...f, uploadProgress: 100, status: "completed" } : f)),
-      )
-    }, Math.random() * 2000 + 3000)
 
-    return uploadedFile
-  }, [validate3DFile])
+      return uploadedFile
+    },
+    [validate3DFile],
+  )
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: "model" | "image") => {
     const selectedFiles = Array.from(event.target.files || [])
@@ -515,9 +521,7 @@ export function RealFileUploadSystem() {
                           </div>
                         </div>
 
-                        {file.status === "uploading" && (
-                          <Progress value={file.uploadProgress} className="mb-2" />
-                        )}
+                        {file.status === "uploading" && <Progress value={file.uploadProgress} className="mb-2" />}
 
                         {file.status === "error" && (
                           <Alert className="border-red-500 bg-red-500/10">
@@ -602,7 +606,11 @@ export function RealFileUploadSystem() {
                     <div key={image.id} className="relative group">
                       <div className="aspect-square bg-gray-700 rounded-lg overflow-hidden">
                         {image.status === "completed" && image.preview ? (
-                          <img src={image.preview || "/placeholder.svg"} alt={image.name} className="w-full h-full object-cover" />
+                          <img
+                            src={image.preview || "/placeholder.svg"}
+                            alt={image.name}
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
                             {image.status === "uploading" && <Loader2 className="h-8 w-8 animate-spin text-blue-400" />}
@@ -613,6 +621,44 @@ export function RealFileUploadSystem() {
 
                       {image.status === "uploading" && (
                         <div className="absolute bottom-2 left-2 right-2">
-                          <Progress value={image.uploadProgress} className="mb-2"/>
-                        </div>\
+                          <Progress value={image.uploadProgress} className="mb-2" />
+                        </div>
                       )}
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFile(image.id, "image")}
+                        className="absolute top-2 right-2 bg-black/50 text-white hover:bg-black/70"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Submit Button */}
+      <div className="flex justify-center">
+        <Button
+          onClick={handleSubmit}
+          disabled={isUploading}
+          className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-8 py-3 text-lg"
+        >
+          {isUploading ? (
+            <>
+              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              Publicando...
+            </>
+          ) : (
+            "Publicar Modelo"
+          )}
+        </Button>
+      </div>
+    </div>
+  )
+}
