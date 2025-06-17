@@ -46,6 +46,7 @@ interface AuthContextType {
   updateUserPhoto: (photoUrl: string) => Promise<void>
   updateUserStats: (stats: Partial<User["stats"]>) => void
   updateUserRole: (newRole: "user" | "creator" | "printer") => Promise<boolean>
+  loginWithProvider: (provider: string) => Promise<boolean>
 }
 
 // Función para generar perfil completamente en 0
@@ -804,6 +805,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user, isSupabaseEnabled, supabase, toast],
   )
 
+  const loginWithProvider = useCallback(
+    async (provider: string): Promise<boolean> => {
+      if (!isSupabaseEnabled || !supabase) {
+        throw new Error("Supabase no está configurado")
+      }
+
+      setIsLoading(true)
+
+      try {
+        console.log(`🔐 Attempting ${provider} login...`)
+
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: provider as any,
+          options: {
+            redirectTo: `${window.location.origin}/auth/callback`,
+          },
+        })
+
+        if (error) {
+          console.error(`❌ ${provider} login error:`, error.message)
+          throw new Error(error.message)
+        }
+
+        console.log(`✅ ${provider} login initiated`)
+        return true
+      } catch (error: any) {
+        console.error(`❌ ${provider} login error:`, error.message)
+        throw error
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [isSupabaseEnabled, supabase],
+  )
+
   // Inicialización optimizada
   useEffect(() => {
     const initSupabase = async () => {
@@ -1081,6 +1117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       updateUserPhoto,
       updateUserStats,
       updateUserRole,
+      loginWithProvider,
     }),
     [
       user,
@@ -1094,6 +1131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       updateUserPhoto,
       updateUserStats,
       updateUserRole,
+      loginWithProvider,
     ],
   )
 
