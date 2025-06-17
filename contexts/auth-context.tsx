@@ -615,53 +615,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const logout = useCallback(async () => {
+    console.log("🚪 Iniciando logout...")
+
     try {
-      console.log("🚪 Iniciando proceso de logout...")
+      // PASO 1: Prevenir loops infinitos
+      setIsLoading(true)
 
-      // Marcar que estamos haciendo logout
-      sessionStorage.setItem("isLoggingOut", "true")
-
-      // PRIMERO: Resetear el estado del usuario inmediatamente
+      // PASO 2: Limpiar estado inmediatamente
       setUser(null)
 
-      // SEGUNDO: Limpiar completamente TODOS los datos de almacenamiento
-      console.log("🧹 Limpiando todos los datos de almacenamiento...")
-
-      // Limpiar localStorage completamente
-      const keysToRemove = ["currentUser", "supabase.auth.token", "sb-auth-token", "supabase-auth-token"]
-
-      // Buscar y eliminar todas las claves relacionadas con Supabase
-      for (let i = localStorage.length - 1; i >= 0; i--) {
-        const key = localStorage.key(i)
-        if (key && (key.includes("supabase") || key.includes("sb-") || key === "currentUser")) {
-          localStorage.removeItem(key)
-        }
-      }
-
-      // Limpiar sessionStorage completamente
+      // PASO 3: Limpiar almacenamiento local ANTES de Supabase
+      localStorage.clear()
       sessionStorage.clear()
 
-      // TERCERO: Si hay Supabase, cerrar sesión
+      // PASO 4: Cerrar sesión en Supabase (sin await para evitar bloqueos)
       if (isSupabaseEnabled && supabase) {
         console.log("👋 Cerrando sesión en Supabase...")
-        try {
-          await supabase.auth.signOut()
-        } catch (supabaseError) {
-          console.warn("⚠️ Error al cerrar sesión en Supabase:", supabaseError)
-        }
+        supabase.auth.signOut().catch((error) => {
+          console.warn("⚠️ Error al cerrar sesión en Supabase:", error)
+        })
       }
 
-      // CUARTO: Mostrar confirmación
+      // PASO 5: Toast y redirección inmediata
       toast({
         title: "Sesión cerrada",
         description: "Has cerrado sesión correctamente",
       })
 
-      // QUINTO: Redirigir sin recargar (para evitar que useEffect restaure el usuario)
-      console.log("🔄 Redirigiendo a página principal...")
-      window.location.replace("/")
-
       console.log("✅ Logout completado")
+
+      // PASO 6: Redirección forzada sin esperar
+      setTimeout(() => {
+        window.location.href = "/"
+      }, 100)
     } catch (error) {
       console.error("❌ Error durante logout:", error)
 
@@ -669,7 +655,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null)
       localStorage.clear()
       sessionStorage.clear()
-      window.location.replace("/")
+      window.location.href = "/"
+    } finally {
+      setIsLoading(false)
     }
   }, [isSupabaseEnabled, supabase, toast])
 
@@ -770,6 +758,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const getUser = async () => {
       try {
+        // NUEVO: Prevenir múltiples ejecuciones
+        if (user !== null) {
+          setIsLoading(false)
+          return
+        }
+
         // Verificar si acabamos de hacer logout (flag temporal)
         const isLoggingOut = sessionStorage.getItem("isLoggingOut")
         if (isLoggingOut) {
