@@ -11,7 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/contexts/auth-context"
 import { toast } from "@/components/ui/use-toast"
-import { Loader2, Mail, Lock, Eye, EyeOff, CheckCircle, RefreshCw } from "lucide-react"
+import { Loader2, Mail, Lock, Eye, EyeOff, CheckCircle, RefreshCw, AlertCircle, X } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
 
 interface EnhancedAuthSystemProps {
   mode?: "login" | "register" | "reset" | "verify"
@@ -27,6 +28,7 @@ export function EnhancedAuthSystem({ mode = "login", onSuccess, redirectTo = "/d
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [verificationSent, setVerificationSent] = useState(false)
   const [resetEmailSent, setResetEmailSent] = useState(false)
+  const [authError, setAuthError] = useState<string | null>(null)
 
   const { login, register, resetPassword, verifyEmail, resendVerification, user } = useAuth()
   const router = useRouter()
@@ -106,20 +108,31 @@ export function EnhancedAuthSystem({ mode = "login", onSuccess, redirectTo = "/d
     if (!validateForm("login")) return
 
     setIsLoading(true)
+    setAuthError(null)
+
     try {
+      toast({
+        title: "🔄 Iniciando sesión...",
+        description: "Verificando credenciales",
+      })
+
       const success = await login(loginForm.email, loginForm.password)
       if (success) {
         toast({
-          title: "¡Bienvenido!",
+          title: "🎉 ¡Bienvenido!",
           description: "Has iniciado sesión correctamente",
         })
         onSuccess?.()
         router.push(redirectTo)
+      } else {
+        throw new Error("Credenciales incorrectas")
       }
     } catch (error: any) {
+      const errorMessage = error.message || "Error al iniciar sesión"
+      setAuthError(errorMessage)
       toast({
-        title: "Error de inicio de sesión",
-        description: error.message || "Credenciales incorrectas",
+        title: "❌ Error de inicio de sesión",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {
@@ -132,21 +145,32 @@ export function EnhancedAuthSystem({ mode = "login", onSuccess, redirectTo = "/d
     if (!validateForm("register")) return
 
     setIsLoading(true)
+    setAuthError(null)
+
     try {
+      toast({
+        title: "🔄 Creando cuenta...",
+        description: "Procesando tu registro",
+      })
+
       const success = await register(registerForm.name, registerForm.email, registerForm.password, registerForm.role)
       if (success) {
         setVerificationSent(true)
         setCurrentMode("verify")
         setVerifyForm({ ...verifyForm, email: registerForm.email })
         toast({
-          title: "¡Registro exitoso!",
+          title: "✅ ¡Registro exitoso!",
           description: "Revisa tu email para verificar tu cuenta",
         })
+      } else {
+        throw new Error("No se pudo crear la cuenta")
       }
     } catch (error: any) {
+      const errorMessage = error.message || "Error al crear la cuenta"
+      setAuthError(errorMessage)
       toast({
-        title: "Error de registro",
-        description: error.message || "No se pudo crear la cuenta",
+        title: "❌ Error de registro",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {
@@ -159,17 +183,26 @@ export function EnhancedAuthSystem({ mode = "login", onSuccess, redirectTo = "/d
     if (!validateForm("reset")) return
 
     setIsLoading(true)
+    setAuthError(null)
+
     try {
+      toast({
+        title: "📧 Enviando email...",
+        description: "Preparando enlace de recuperación",
+      })
+
       await resetPassword(resetForm.email)
       setResetEmailSent(true)
       toast({
-        title: "Email enviado",
+        title: "✅ Email enviado",
         description: "Revisa tu bandeja de entrada para restablecer tu contraseña",
       })
     } catch (error: any) {
+      const errorMessage = error.message || "No se pudo enviar el email"
+      setAuthError(errorMessage)
       toast({
-        title: "Error",
-        description: error.message || "No se pudo enviar el email",
+        title: "❌ Error",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {
@@ -182,20 +215,31 @@ export function EnhancedAuthSystem({ mode = "login", onSuccess, redirectTo = "/d
     if (!validateForm("verify")) return
 
     setIsLoading(true)
+    setAuthError(null)
+
     try {
+      toast({
+        title: "🔍 Verificando código...",
+        description: "Validando tu email",
+      })
+
       const success = await verifyEmail(verifyForm.email, verifyForm.token)
       if (success) {
         toast({
-          title: "¡Email verificado!",
+          title: "🎉 ¡Email verificado!",
           description: "Tu cuenta ha sido activada correctamente",
         })
         onSuccess?.()
         router.push(redirectTo)
+      } else {
+        throw new Error("Código inválido o expirado")
       }
     } catch (error: any) {
+      const errorMessage = error.message || "Error de verificación"
+      setAuthError(errorMessage)
       toast({
-        title: "Error de verificación",
-        description: error.message || "Código inválido o expirado",
+        title: "❌ Error de verificación",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {
@@ -205,16 +249,25 @@ export function EnhancedAuthSystem({ mode = "login", onSuccess, redirectTo = "/d
 
   const handleResendVerification = async () => {
     setIsLoading(true)
+    setAuthError(null)
+
     try {
+      toast({
+        title: "📧 Reenviando código...",
+        description: "Enviando nuevo código de verificación",
+      })
+
       await resendVerification(verifyForm.email)
       toast({
-        title: "Código reenviado",
+        title: "✅ Código reenviado",
         description: "Revisa tu email para el nuevo código",
       })
     } catch (error: any) {
+      const errorMessage = error.message || "No se pudo reenviar el código"
+      setAuthError(errorMessage)
       toast({
-        title: "Error",
-        description: error.message || "No se pudo reenviar el código",
+        title: "❌ Error",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {
@@ -224,6 +277,38 @@ export function EnhancedAuthSystem({ mode = "login", onSuccess, redirectTo = "/d
 
   return (
     <div className="w-full max-w-md mx-auto">
+      {/* Error global */}
+      <AnimatePresence>
+        {authError && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="mb-4"
+          >
+            <Card className="bg-red-500/10 border-red-400/30">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-red-400 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="text-red-400 font-semibold text-sm">Error de autenticación</h4>
+                    <p className="text-red-300 text-sm mt-1">{authError}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setAuthError(null)}
+                    className="text-red-400 hover:text-red-300"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <Tabs value={currentMode} onValueChange={(value) => setCurrentMode(value as any)}>
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="login">Iniciar</TabsTrigger>

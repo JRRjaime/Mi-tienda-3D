@@ -37,6 +37,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 })
     }
 
+    // Añadir logging adicional para producción
+    console.log("🔥 PRODUCTION WEBHOOK - Processing event:", event.type)
+
     // Manejar diferentes tipos de eventos
     switch (event.type) {
       case "payment_intent.succeeded":
