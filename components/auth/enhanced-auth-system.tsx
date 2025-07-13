@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -10,9 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/contexts/auth-context"
-import { toast } from "@/components/ui/use-toast"
 import { Loader2, Mail, Lock, Eye, EyeOff, CheckCircle, RefreshCw, AlertCircle, X } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
 
 interface EnhancedAuthSystemProps {
   mode?: "login" | "register" | "reset" | "verify"
@@ -26,11 +23,9 @@ export function EnhancedAuthSystem({ mode = "login", onSuccess, redirectTo = "/d
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [verificationSent, setVerificationSent] = useState(false)
-  const [resetEmailSent, setResetEmailSent] = useState(false)
   const [authError, setAuthError] = useState<string | null>(null)
 
-  const { login, register, resetPassword, verifyEmail, resendVerification, user } = useAuth()
+  const { login, register, resetPassword, verifyEmail, resendVerification, loginDemo } = useAuth()
   const router = useRouter()
 
   // Estados de formularios
@@ -63,7 +58,7 @@ export function EnhancedAuthSystem({ mode = "login", onSuccess, redirectTo = "/d
   }
 
   const validatePassword = (password: string) => {
-    return password.length >= 8 && /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)
+    return password.length >= 8
   }
 
   const validateForm = (formType: string) => {
@@ -82,7 +77,7 @@ export function EnhancedAuthSystem({ mode = "login", onSuccess, redirectTo = "/d
         else if (!validateEmail(registerForm.email)) newErrors.email = "Email inválido"
         if (!registerForm.password) newErrors.password = "Contraseña es requerida"
         else if (!validatePassword(registerForm.password))
-          newErrors.password = "Contraseña debe tener al menos 8 caracteres, mayúscula, minúscula y número"
+          newErrors.password = "Contraseña debe tener al menos 8 caracteres"
         if (registerForm.password !== registerForm.confirmPassword)
           newErrors.confirmPassword = "Las contraseñas no coinciden"
         break
@@ -105,36 +100,38 @@ export function EnhancedAuthSystem({ mode = "login", onSuccess, redirectTo = "/d
   // Handlers
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!validateForm("login")) return
+    if (!validateForm("login") || isLoading) return
 
     setIsLoading(true)
     setAuthError(null)
 
     try {
-      toast({
-        title: "🔄 Iniciando sesión...",
-        description: "Verificando credenciales",
-      })
-
       const success = await login(loginForm.email, loginForm.password)
       if (success) {
-        toast({
-          title: "🎉 ¡Bienvenido!",
-          description: "Has iniciado sesión correctamente",
-        })
         onSuccess?.()
         router.push(redirectTo)
-      } else {
-        throw new Error("Credenciales incorrectas")
       }
     } catch (error: any) {
-      const errorMessage = error.message || "Error al iniciar sesión"
-      setAuthError(errorMessage)
-      toast({
-        title: "❌ Error de inicio de sesión",
-        description: errorMessage,
-        variant: "destructive",
-      })
+      setAuthError(error.message || "Error al iniciar sesión")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleDemoLogin = async () => {
+    if (isLoading) return
+
+    setIsLoading(true)
+    setAuthError(null)
+
+    try {
+      const success = await loginDemo()
+      if (success) {
+        onSuccess?.()
+        router.push(redirectTo)
+      }
+    } catch (error: any) {
+      setAuthError(error.message || "Error al crear cuenta demo")
     } finally {
       setIsLoading(false)
     }
@@ -142,37 +139,19 @@ export function EnhancedAuthSystem({ mode = "login", onSuccess, redirectTo = "/d
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!validateForm("register")) return
+    if (!validateForm("register") || isLoading) return
 
     setIsLoading(true)
     setAuthError(null)
 
     try {
-      toast({
-        title: "🔄 Creando cuenta...",
-        description: "Procesando tu registro",
-      })
-
       const success = await register(registerForm.name, registerForm.email, registerForm.password, registerForm.role)
       if (success) {
-        setVerificationSent(true)
-        setCurrentMode("verify")
-        setVerifyForm({ ...verifyForm, email: registerForm.email })
-        toast({
-          title: "✅ ¡Registro exitoso!",
-          description: "Revisa tu email para verificar tu cuenta",
-        })
-      } else {
-        throw new Error("No se pudo crear la cuenta")
+        onSuccess?.()
+        router.push(redirectTo)
       }
     } catch (error: any) {
-      const errorMessage = error.message || "Error al crear la cuenta"
-      setAuthError(errorMessage)
-      toast({
-        title: "❌ Error de registro",
-        description: errorMessage,
-        variant: "destructive",
-      })
+      setAuthError(error.message || "Error al crear la cuenta")
     } finally {
       setIsLoading(false)
     }
@@ -180,31 +159,15 @@ export function EnhancedAuthSystem({ mode = "login", onSuccess, redirectTo = "/d
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!validateForm("reset")) return
+    if (!validateForm("reset") || isLoading) return
 
     setIsLoading(true)
     setAuthError(null)
 
     try {
-      toast({
-        title: "📧 Enviando email...",
-        description: "Preparando enlace de recuperación",
-      })
-
       await resetPassword(resetForm.email)
-      setResetEmailSent(true)
-      toast({
-        title: "✅ Email enviado",
-        description: "Revisa tu bandeja de entrada para restablecer tu contraseña",
-      })
     } catch (error: any) {
-      const errorMessage = error.message || "No se pudo enviar el email"
-      setAuthError(errorMessage)
-      toast({
-        title: "❌ Error",
-        description: errorMessage,
-        variant: "destructive",
-      })
+      setAuthError(error.message || "No se pudo enviar el email")
     } finally {
       setIsLoading(false)
     }
@@ -212,64 +175,34 @@ export function EnhancedAuthSystem({ mode = "login", onSuccess, redirectTo = "/d
 
   const handleVerifyEmail = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!validateForm("verify")) return
+    if (!validateForm("verify") || isLoading) return
 
     setIsLoading(true)
     setAuthError(null)
 
     try {
-      toast({
-        title: "🔍 Verificando código...",
-        description: "Validando tu email",
-      })
-
       const success = await verifyEmail(verifyForm.email, verifyForm.token)
       if (success) {
-        toast({
-          title: "🎉 ¡Email verificado!",
-          description: "Tu cuenta ha sido activada correctamente",
-        })
         onSuccess?.()
         router.push(redirectTo)
-      } else {
-        throw new Error("Código inválido o expirado")
       }
     } catch (error: any) {
-      const errorMessage = error.message || "Error de verificación"
-      setAuthError(errorMessage)
-      toast({
-        title: "❌ Error de verificación",
-        description: errorMessage,
-        variant: "destructive",
-      })
+      setAuthError(error.message || "Error de verificación")
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleResendVerification = async () => {
+    if (isLoading) return
+
     setIsLoading(true)
     setAuthError(null)
 
     try {
-      toast({
-        title: "📧 Reenviando código...",
-        description: "Enviando nuevo código de verificación",
-      })
-
       await resendVerification(verifyForm.email)
-      toast({
-        title: "✅ Código reenviado",
-        description: "Revisa tu email para el nuevo código",
-      })
     } catch (error: any) {
-      const errorMessage = error.message || "No se pudo reenviar el código"
-      setAuthError(errorMessage)
-      toast({
-        title: "❌ Error",
-        description: errorMessage,
-        variant: "destructive",
-      })
+      setAuthError(error.message || "No se pudo reenviar el código")
     } finally {
       setIsLoading(false)
     }
@@ -278,36 +211,27 @@ export function EnhancedAuthSystem({ mode = "login", onSuccess, redirectTo = "/d
   return (
     <div className="w-full max-w-md mx-auto">
       {/* Error global */}
-      <AnimatePresence>
-        {authError && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="mb-4"
-          >
-            <Card className="bg-red-500/10 border-red-400/30">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-red-400 mt-0.5" />
-                  <div className="flex-1">
-                    <h4 className="text-red-400 font-semibold text-sm">Error de autenticación</h4>
-                    <p className="text-red-300 text-sm mt-1">{authError}</p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setAuthError(null)}
-                    className="text-red-400 hover:text-red-300"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {authError && (
+        <Card className="bg-red-500/10 border-red-400/30 mb-4">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-red-400 mt-0.5" />
+              <div className="flex-1">
+                <h4 className="text-red-400 font-semibold text-sm">Error de autenticación</h4>
+                <p className="text-red-300 text-sm mt-1">{authError}</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setAuthError(null)}
+                className="text-red-400 hover:text-red-300"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs value={currentMode} onValueChange={(value) => setCurrentMode(value as any)}>
         <TabsList className="grid w-full grid-cols-4">
@@ -376,6 +300,32 @@ export function EnhancedAuthSystem({ mode = "login", onSuccess, redirectTo = "/d
                     </>
                   ) : (
                     "Iniciar Sesión"
+                  )}
+                </Button>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">O</span>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full bg-transparent"
+                  onClick={handleDemoLogin}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creando demo...
+                    </>
+                  ) : (
+                    "🎭 Probar con cuenta demo"
                   )}
                 </Button>
 
@@ -501,45 +451,32 @@ export function EnhancedAuthSystem({ mode = "login", onSuccess, redirectTo = "/d
               <CardDescription>Te enviaremos un enlace para restablecer tu contraseña</CardDescription>
             </CardHeader>
             <CardContent>
-              {resetEmailSent ? (
-                <div className="text-center space-y-4">
-                  <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
-                  <div>
-                    <h3 className="font-semibold">Email enviado</h3>
-                    <p className="text-sm text-gray-600">Revisa tu bandeja de entrada</p>
-                  </div>
-                  <Button onClick={() => setResetEmailSent(false)} variant="outline">
-                    Enviar otro email
-                  </Button>
+              <form onSubmit={handleResetPassword} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="reset-email">Email</Label>
+                  <Input
+                    id="reset-email"
+                    type="email"
+                    placeholder="tu@email.com"
+                    value={resetForm.email}
+                    onChange={(e) => setResetForm({ ...resetForm, email: e.target.value })}
+                    className={errors.email ? "border-red-500" : ""}
+                    disabled={isLoading}
+                  />
+                  {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
                 </div>
-              ) : (
-                <form onSubmit={handleResetPassword} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="reset-email">Email</Label>
-                    <Input
-                      id="reset-email"
-                      type="email"
-                      placeholder="tu@email.com"
-                      value={resetForm.email}
-                      onChange={(e) => setResetForm({ ...resetForm, email: e.target.value })}
-                      className={errors.email ? "border-red-500" : ""}
-                      disabled={isLoading}
-                    />
-                    {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
-                  </div>
 
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Enviando...
-                      </>
-                    ) : (
-                      "Enviar enlace de recuperación"
-                    )}
-                  </Button>
-                </form>
-              )}
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    "Enviar enlace de recuperación"
+                  )}
+                </Button>
+              </form>
             </CardContent>
           </Card>
         </TabsContent>

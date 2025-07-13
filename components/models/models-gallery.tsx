@@ -114,7 +114,7 @@ export function ModelsGallery() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent mb-2">
@@ -131,7 +131,7 @@ export function ModelsGallery() {
                 placeholder="Buscar modelos..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-gray-700 border-gray-600 text-white pl-10"
+                className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-400 pl-10"
               />
             </div>
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
@@ -182,7 +182,7 @@ export function ModelsGallery() {
                       className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                     {model.featured && (
-                      <Badge className="absolute top-2 left-2 bg-gradient-to-r from-yellow-500 to-orange-500">
+                      <Badge className="absolute top-2 left-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
                         Destacado
                       </Badge>
                     )}
@@ -209,7 +209,7 @@ export function ModelsGallery() {
                       />
                       <span className="text-gray-300 text-xs">{model.author.name}</span>
                       {model.author.verified && (
-                        <Badge variant="secondary" className="text-xs px-1 py-0">
+                        <Badge variant="secondary" className="text-xs px-1 py-0 bg-blue-600 text-white">
                           ✓
                         </Badge>
                       )}
@@ -217,16 +217,16 @@ export function ModelsGallery() {
                     <div className="flex items-center gap-4 mb-3 text-xs text-gray-400">
                       <div className="flex items-center gap-1">
                         <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                        <span>{model.rating}</span>
+                        <span className="text-gray-300">{model.rating}</span>
                         <span>({model.reviews})</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Download className="h-3 w-3" />
-                        <span>{model.downloads}</span>
+                        <span className="text-gray-300">{model.downloads}</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Heart className="h-3 w-3" />
-                        <span>{model.likes}</span>
+                        <span className="text-gray-300">{model.likes}</span>
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-1 mb-3">
@@ -247,12 +247,12 @@ export function ModelsGallery() {
                     </div>
                     <div className="flex flex-wrap gap-1 mb-4">
                       {model.materials.slice(0, 2).map((material) => (
-                        <Badge key={material} variant="secondary" className="text-xs">
+                        <Badge key={material} variant="secondary" className="text-xs bg-gray-600 text-gray-200">
                           {material}
                         </Badge>
                       ))}
                       {model.materials.length > 2 && (
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge variant="secondary" className="text-xs bg-gray-600 text-gray-200">
                           +{model.materials.length - 2}
                         </Badge>
                       )}
@@ -260,13 +260,17 @@ export function ModelsGallery() {
                     <div className="flex gap-2">
                       <Button
                         size="sm"
-                        className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700"
+                        className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white"
                         onClick={() => handleAddToCart(model)}
                       >
                         <ShoppingCart className="h-3 w-3 mr-1" />
                         Comprar
                       </Button>
-                      <Button variant="outline" size="sm" className="border-gray-600 text-gray-300 hover:bg-gray-700">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-gray-600 text-gray-300 hover:bg-gray-700 bg-transparent"
+                      >
                         <Eye className="h-3 w-3" />
                       </Button>
                     </div>
@@ -283,7 +287,7 @@ export function ModelsGallery() {
               <p className="text-gray-400">No se encontraron modelos. ¿Por qué no subes el primero?</p>
               <Button
                 asChild
-                className="mt-6 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700"
+                className="mt-6 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white"
               >
                 <Link href="/subir-modelo">
                   <Upload className="mr-2 h-4 w-4" />
