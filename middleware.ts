@@ -1,22 +1,30 @@
+import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
+  const supabase = createMiddlewareClient({ req, res })
 
-  // Rutas protegidas
-  const protectedRoutes = ["/perfil", "/subir-modelo", "/admin", "/printer-tools", "/pedidos", "/analytics"]
+  // Refresh session if expired
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  // Protected routes
+  const protectedRoutes = ["/perfil", "/subir-modelo", "/admin", "/printer-tools"]
   const isProtectedRoute = protectedRoutes.some((route) => req.nextUrl.pathname.startsWith(route))
 
-  // Rutas de admin
+  // Admin only routes
   const adminRoutes = ["/admin"]
   const isAdminRoute = adminRoutes.some((route) => req.nextUrl.pathname.startsWith(route))
 
-  // Solo verificar autenticación en rutas protegidas
-  if (isProtectedRoute) {
-    // En modo demo, verificar localStorage del lado del cliente
-    // Por ahora permitir acceso y manejar la redirección en el cliente
-    return res
+  if (isProtectedRoute && !session) {
+    return NextResponse.redirect(new URL("/?auth=login", req.url))
+  }
+
+  if (isAdminRoute && session?.user?.user_metadata?.role !== "admin") {
+    return NextResponse.redirect(new URL("/", req.url))
   }
 
   return res

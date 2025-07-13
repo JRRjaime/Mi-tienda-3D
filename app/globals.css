@@ -69,27 +69,6 @@
   }
 }
 
-/* Asegurar que el texto sea visible en todos los temas */
-.text-white {
-  color: rgb(255 255 255) !important;
-}
-
-.text-gray-300 {
-  color: rgb(209 213 219) !important;
-}
-
-.text-gray-400 {
-  color: rgb(156 163 175) !important;
-}
-
-.text-gray-500 {
-  color: rgb(107 114 128) !important;
-}
-
-.placeholder\:text-gray-400::placeholder {
-  color: rgb(156 163 175) !important;
-}
-
 /* Colores más claros y vibrantes */
 .bg-light-gradient {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -161,46 +140,4 @@
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
-}
-
-/* Asegurar contraste en inputs y selects */
-.bg-gray-700 {
-  background-color: rgb(55 65 81) !important;
-}
-
-.bg-gray-800 {
-  background-color: rgb(31 41 55) !important;
-}
-
-.border-gray-600 {
-  border-color: rgb(75 85 99) !important;
-}
-
-.border-gray-700 {
-  border-color: rgb(55 65 81) !important;
-}
-
-/* Mejorar visibilidad de badges */
-.bg-blue-600 {
-  background-color: rgb(37 99 235) !important;
-}
-
-.bg-gray-600 {
-  background-color: rgb(75 85 99) !important;
-}
-
-/* Asegurar que los placeholders sean visibles */
-input::placeholder,
-textarea::placeholder {
-  color: rgb(156 163 175) !important;
-  opacity: 1;
-}
-
-/* Mejorar contraste en hover states */
-.hover\:bg-gray-700:hover {
-  background-color: rgb(55 65 81) !important;
-}
-
-.hover\:bg-gray-800:hover {
-  background-color: rgb(31 41 55) !important;
 }
